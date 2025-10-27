@@ -4,7 +4,11 @@ import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { MongooseModule, MongooseModuleFactoryOptions } from '@nestjs/mongoose';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-ioredis-yet';
-import { ProductModule } from './product/product.module';
+import { ProxyModule } from './proxy/proxy.module';
+import { ApikeyModule } from './apikey/apikey.module';
+import { UserModule } from './user/user.module';
+import { TypeServicesModule } from './type_services/type_services.module';
+import { PartnersModule } from './partners/partners.module';
 import config from './config/config';
 
 @Module({
@@ -62,7 +66,11 @@ import config from './config/config';
       },
     }),
 
-    ProductModule,
+    ProxyModule,
+    ApikeyModule,
+    UserModule,
+    TypeServicesModule,
+    PartnersModule,
   ],
   controllers: [],
   providers: [],
