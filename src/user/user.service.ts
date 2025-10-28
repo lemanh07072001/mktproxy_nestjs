@@ -1,26 +1,55 @@
 import { Injectable } from '@nestjs/common';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { User } from './entities/user.entity';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UserService {
-  create(createUserDto: CreateUserDto) {
-    return 'This action adds a new user';
+  constructor(
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+  ) {}
+
+  async findAll() {
+    return await this.userRepository.find();
   }
 
-  findAll() {
-    return `This action returns all user`;
+  async fineByEmail(email: string) {
+    return await this.userRepository.findOne({ where: { email } });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
+  async validateUser(email: string, password: string) {
+    const user = await this.fineByEmail(email);
+
+    if (!user) {
+      return null;
+    }
+
+    const status = await bcrypt.compare(password, user.password);
+    if (status) {
+      return user;
+    }
+
+    return null;
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
-  }
+  // async create(data: CreateUserDto): Promise<Users> {
+  //   const existingUser = await this.fineByEmail(data.email);
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
-  }
+  //   // 🔹 Kiểm tra Email có trong cơ sở dữ liệu không?
+  //   if (existingUser) {
+  //     throw new BadRequestException('Email already exists');
+  //   }
+
+  //   // 🔹 Hash mật khẩu trước khi lưu
+  //   const salt = await bcrypt.genSalt(10);
+  //   const hashedPassword = await bcrypt.hash(data.password, salt);
+
+  //   const user = this.userRepository.create({
+  //     ...data,
+  //     password: hashedPassword,
+  //   });
+  //   return this.userRepository.save(user);
+  // }
 }

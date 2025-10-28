@@ -1,9 +1,9 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, UseGuards } from '@nestjs/common';
 import { ApikeyService } from './apikey.service';
-import { CreateApikeyDto } from './dto/create-apikey.dto';
-import { UpdateApikeyDto } from './dto/update-apikey.dto';
+import { AuthGuard } from 'src/guards/auth.guard';
 
 @Controller('apikey')
+@UseGuards(AuthGuard)
 export class ApikeyController {
   constructor(private readonly apikeyService: ApikeyService) {}
 

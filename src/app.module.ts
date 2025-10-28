@@ -9,6 +9,7 @@ import { ApikeyModule } from './apikey/apikey.module';
 import { UserModule } from './user/user.module';
 import { TypeServicesModule } from './type_services/type_services.module';
 import { PartnersModule } from './partners/partners.module';
+import { AuthModule } from './auth/auth.module';
 import config from './config/config';
 
 @Module({
@@ -60,8 +61,8 @@ import config from './config/config';
               host: redis.host,
               port: redis.port,
             },
-            ttl: redis.ttl,
           }),
+          ttl: redis.ttl,
         };
       },
     }),
@@ -71,6 +72,7 @@ import config from './config/config';
     UserModule,
     TypeServicesModule,
     PartnersModule,
+    AuthModule,
   ],
   controllers: [],
   providers: [],

@@ -62,6 +62,39 @@ export class Apikey {
   })
   last_time_use: Date;
 
+  @Column({ type: 'json', nullable: true })
+  proxys: string;
+
+  @Column({ type: 'json', nullable: true })
+  parent_api_mapping: any;
+
+  @Column({ nullable: true })
+  allow_ips: string;
+
+  @Column({ nullable: true })
+  soluong: number;
+
+  @Column({ nullable: true })
+  order_id: number;
+
+  @Column({ nullable: true })
+  protocol: string;
+
+  @Column({ nullable: true })
+  ip_version: string;
+
+  @Column({ nullable: true })
+  is_private: string;
+
+  @Column({ nullable: true })
+  cooldown: number;
+
+  @Column({
+    type: 'datetime',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
+  last_fetch: Date;
+
   @Column({
     type: 'datetime',
     default: () => 'CURRENT_TIMESTAMP',
