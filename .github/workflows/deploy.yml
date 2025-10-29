@@ -30,6 +30,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
+            export PATH=$PATH:/root/.nvm/versions/node/v20.11.1/bin
             cd /var/www/mktproxy_nestjs
             git pull origin main
             npm ci
