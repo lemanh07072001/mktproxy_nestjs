@@ -1,3 +1,4 @@
+/* eslint-disable */
 import {
   Controller,
   Get,
@@ -7,7 +8,7 @@ import {
   UseGuards,
   Post,
   Body,
-  Req
+  Req,
 } from '@nestjs/common';
 
 import { ApikeyService } from 'src/apikey/apikey.service';
@@ -27,7 +28,7 @@ export class ProxyController {
   constructor(
     private readonly apikeyService: ApikeyService,
     private readonly orderService: OrderService,
-    private readonly proxyService: ProxyService
+    private readonly proxyService: ProxyService,
   ) {}
 
   private throwBadRequest(code: number, message: string, error: string): never {
@@ -43,14 +44,15 @@ export class ProxyController {
     );
   }
 
-  private ensureApiKeyUsable(
-    api_key: any,
-  ): asserts api_key is {
+  private ensureApiKeyUsable(api_key: any): asserts api_key is {
     expired_at?: string | Date;
     protocol?: string;
     proxys?: any;
     parent_api_mapping?: { id_proxy_partner?: string | number };
-    service_type: { api_type: string; partner?: { partner_code?: string; token_api?: string } };
+    service_type: {
+      api_type: string;
+      partner?: { partner_code?: string; token_api?: string };
+    };
   } {
     if (!api_key) {
       this.throwBadRequest(40000006, 'Key not found', 'KEY_NOT_FOUND');
@@ -115,7 +117,12 @@ export class ProxyController {
             };
             await redisSet(PROXY_XOAY(key), dataJson, 60);
 
-            return { data: dataJson, success: true, code: 200, status: 'SUCCESS' };
+            return {
+              data: dataJson,
+              success: true,
+              code: 200,
+              status: 'SUCCESS',
+            };
           }
 
           const match = dataResponse?.message?.match(/\d+/);
@@ -123,7 +130,9 @@ export class ProxyController {
             success: false,
             code: 40400006,
             message:
-              'Proxy can be changed again in ' + (match ? match[0] : 0) + ' seconds.',
+              'Proxy can be changed again in ' +
+              (match ? match[0] : 0) +
+              ' seconds.',
             status: 'FAIL',
             error: 'ERROR_PROXY',
           };
@@ -132,22 +141,20 @@ export class ProxyController {
         }
 
         case 'homeproxy.vn': {
-         const token = api_key.service_type.partner?.token_api;
-         const id_proxy_partner = api_key?.parent_api_mapping?.id_proxy_partner;
-         const urlGetOrderProxyPartner = `${GetProxyUrl['homeproxy.vn']}/merchant/proxies/${id_proxy_partner}/rotate`;
-         
-       
-          const response = await instance.get<any>(urlGetOrderProxyPartner,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-                'Accept' : 'application/json',
-              },
+          const token = api_key.service_type.partner?.token_api;
+          const id_proxy_partner =
+            api_key?.parent_api_mapping?.id_proxy_partner;
+          const urlGetOrderProxyPartner = `${GetProxyUrl['homeproxy.vn']}/merchant/proxies/${id_proxy_partner}/rotate`;
+
+          const response = await instance.get<any>(urlGetOrderProxyPartner, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
             },
-          );
+          });
 
           const dataResponse = response.data;
-          if(dataResponse?.status === 'success') {
+          if (dataResponse?.status === 'success') {
             const proxyArray = dataResponse?.proxy.split(':');
             const dataJson = {
               realIpAddress: dataResponse?.ip,
@@ -157,11 +164,19 @@ export class ProxyController {
               // message: 'Proxy can be changed again in ' + dataResponse?.timeRemaining + ' seconds.',
               // timeRemaining: dataResponse?.timeRemaining,
             };
-            
-            const ttl = Math.max(1, Number(dataResponse?.timeRemaining ?? 60) - 2);
+
+            const ttl = Math.max(
+              1,
+              Number(dataResponse?.timeRemaining ?? 60) - 2,
+            );
             await redisSet(PROXY_XOAY(key), dataJson, ttl);
 
-            return { data: dataJson, success: true, code: 200, status: 'SUCCESS' };
+            return {
+              data: dataJson,
+              success: true,
+              code: 200,
+              status: 'SUCCESS',
+            };
           }
 
           return {
@@ -170,7 +185,6 @@ export class ProxyController {
             status: 'FAIL',
             error: 'ERROR_PROXY',
           };
-          
         }
       }
     } catch (error: unknown) {
@@ -199,8 +213,6 @@ export class ProxyController {
 
       const cachedProxy = await redisGet(PROXY_XOAY(key));
 
-  
-
       if (cachedProxy) {
         return {
           data: cachedProxy,
@@ -209,15 +221,14 @@ export class ProxyController {
           status: 'SUCCESS',
         };
       }
-  
-   
+
       switch (api_key.service_type.partner?.partner_code) {
         case 'proxy.vn': {
-       
           const dataProxy = api_key?.proxys;
 
-          const proxyArray = typeof dataProxy === 'string' ? JSON.parse(dataProxy) : dataProxy;
-  
+          const proxyArray =
+            typeof dataProxy === 'string' ? JSON.parse(dataProxy) : dataProxy;
+
           const proxyHttp = (proxyArray.http || '').split(':');
           const proxySocks5 = (proxyArray.socks5 || '').split(':');
 
@@ -229,27 +240,30 @@ export class ProxyController {
             socks5Port: proxySocks5[1],
             host: proxyHttp[0],
           };
-          return { data: dataJson, success: true, code: 200, status: 'SUCCESS' };
+          return {
+            data: dataJson,
+            success: true,
+            code: 200,
+            status: 'SUCCESS',
+          };
           break;
         }
 
         case 'homeproxy.vn': {
-         const token = api_key.service_type.partner?.token_api;
-         const id_proxy_partner = api_key?.parent_api_mapping?.id_proxy_partner;
-         const urlGetOrderProxyPartner = `${GetProxyUrl['homeproxy.vn']}/merchant/proxies/${id_proxy_partner}/rotate`;
-         
-       
-          const response = await instance.get<any>(urlGetOrderProxyPartner,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-                'Accept' : 'application/json',
-              },
+          const token = api_key.service_type.partner?.token_api;
+          const id_proxy_partner =
+            api_key?.parent_api_mapping?.id_proxy_partner;
+          const urlGetOrderProxyPartner = `${GetProxyUrl['homeproxy.vn']}/merchant/proxies/${id_proxy_partner}/rotate`;
+
+          const response = await instance.get<any>(urlGetOrderProxyPartner, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
             },
-          );
+          });
 
           const dataResponse = response.data;
-          if(dataResponse?.status === 'success') {
+          if (dataResponse?.status === 'success') {
             const proxyArray = dataResponse?.proxy.split(':');
             const dataJson = {
               realIpAddress: dataResponse?.ip,
@@ -259,12 +273,20 @@ export class ProxyController {
               // message: 'Proxy can be changed again in ' + dataResponse?.timeRemaining + ' seconds.',
               // timeRemaining: dataResponse?.timeRemaining,
             };
-            
+
             await redisSet(PROXY_XOAY(key), dataJson, 60);
-            const ttl = Math.max(1, Number(dataResponse?.timeRemaining ?? 60) - 2);
+            const ttl = Math.max(
+              1,
+              Number(dataResponse?.timeRemaining ?? 60) - 2,
+            );
             await redisSet(PROXY_XOAY(key), dataJson, ttl);
 
-            return { data: dataJson, success: true, code: 200, status: 'SUCCESS' };
+            return {
+              data: dataJson,
+              success: true,
+              code: 200,
+              status: 'SUCCESS',
+            };
           }
 
           return {
@@ -273,10 +295,8 @@ export class ProxyController {
             status: 'FAIL',
             error: 'ERROR_PROXY',
           };
-          
         }
       }
-      
     } catch (error: unknown) {
       if (error instanceof Error) {
         console.error('❌ Message:', error.message);
@@ -302,16 +322,16 @@ export class ProxyController {
   @Post('buy')
   async buy(
     @Req() req,
-    @Body() body: { 
-      quantity: number; 
-      days: number,
-       serviceTypeId: number 
-      }
-    ) {
+    @Body()
+    body: {
+      quantity: number;
+      days: number;
+      serviceTypeId: number;
+    },
+  ) {
     const user = (req as any)?.user;
     const user_id = user?.sub ?? user?.id;
 
-    
     const { quantity, days, serviceTypeId } = body;
 
     if (!quantity || !days || quantity <= 0 || days <= 0) {
@@ -320,8 +340,8 @@ export class ProxyController {
 
     const dataOrder = {
       user_id,
-      serviceTypeId
-    }
+      serviceTypeId,
+    };
 
     // const keys = await this.proxyService.buyKeys(quantity, days, user_id);
     // return {
@@ -341,7 +361,7 @@ export class ProxyController {
   async getAllProxies() {
     const proxies = await this.proxyService.getAllProxies();
     console.log('dsa');
-    
+
     return {
       success: true,
       total: proxies.length,
