@@ -20,14 +20,13 @@ import { ProxyVNResponse } from './response.interface';
 import { PROXY_XOAY } from 'src/common/key.cache';
 import { redisGet, redisSet } from 'src/common/redis';
 import { ProxyService } from './proxy.service';
-import { OrderService } from 'src/order/order.service';
 
 @Controller('api/proxies')
 @UseGuards(AuthGuard)
 export class ProxyController {
   constructor(
     private readonly apikeyService: ApikeyService,
-    private readonly orderService: OrderService,
+
     private readonly proxyService: ProxyService,
   ) {}
 
@@ -307,7 +306,7 @@ export class ProxyController {
   }
 
   @Get('get/:key')
-  // @Public()
+  @Public()
   async getProxy(@Param('key') key: string) {
     const data = await this.proxyService.getProxyForKey(key);
     return {

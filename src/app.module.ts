@@ -10,7 +10,6 @@ import { UserModule } from './user/user.module';
 import { TypeServicesModule } from './type_services/type_services.module';
 import { PartnersModule } from './partners/partners.module';
 import { AuthModule } from './auth/auth.module';
-import { OrderModule } from './order/order.module';
 
 import config from './config/config';
 
@@ -75,7 +74,6 @@ import config from './config/config';
     TypeServicesModule,
     PartnersModule,
     AuthModule,
-    OrderModule,
   ],
   controllers: [],
   providers: [],
