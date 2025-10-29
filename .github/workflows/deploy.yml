@@ -43,7 +43,7 @@ jobs:
             git pull origin main
 
             echo "📦 Installing dependencies..."
-            npm ci
+            npm i
 
             echo "🏗️ Building project..."
             npm run build
