@@ -12,7 +12,7 @@ import { AuthGuard } from '../guards/auth.guard';
     PassportModule,
     JwtModule.register({
       secret:
-        'DO NOT USE THIS VALUE. INSTEAD, CREATE A COMPLEX SECRET AND KEEP IT SAFE OUTSIDE OF THE SOURCE CODE.',
+        'RJnPrs1zjw1rzNVInrkSoRopnad7DEIrFsqNVzoBqDRGhtovLeYLOnTMPaUuS1aq',
       signOptions: { expiresIn: '1h' },
     }),
   ],

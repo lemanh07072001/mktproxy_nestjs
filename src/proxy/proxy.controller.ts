@@ -5,6 +5,9 @@ import {
   HttpStatus,
   Param,
   UseGuards,
+  Post,
+  Body,
+  Req
 } from '@nestjs/common';
 
 import { ApikeyService } from 'src/apikey/apikey.service';
@@ -15,12 +18,16 @@ import { GetProxyUrl } from './api/url.api';
 import { ProxyVNResponse } from './response.interface';
 import { PROXY_XOAY } from 'src/common/key.cache';
 import { redisGet, redisSet } from 'src/common/redis';
+import { ProxyService } from './proxy.service';
+import { OrderService } from 'src/order/order.service';
 
 @Controller('api/proxies')
 @UseGuards(AuthGuard)
 export class ProxyController {
   constructor(
     private readonly apikeyService: ApikeyService,
+    private readonly orderService: OrderService,
+    private readonly proxyService: ProxyService
   ) {}
 
   private throwBadRequest(code: number, message: string, error: string): never {
@@ -277,5 +284,68 @@ export class ProxyController {
         console.error('❌ Unknown error:', error);
       }
     }
+  }
+
+  @Get('get/:key')
+  // @Public()
+  async getProxy(@Param('key') key: string) {
+    const data = await this.proxyService.getProxyForKey(key);
+    return {
+      success: true,
+      key,
+      proxy: data?.proxy,
+      reused: data?.reused,
+    };
+  }
+
+  // Mua key
+  @Post('buy')
+  async buy(
+    @Req() req,
+    @Body() body: { 
+      quantity: number; 
+      days: number,
+       serviceTypeId: number 
+      }
+    ) {
+    const user = (req as any)?.user;
+    const user_id = user?.sub ?? user?.id;
+
+    
+    const { quantity, days, serviceTypeId } = body;
+
+    if (!quantity || !days || quantity <= 0 || days <= 0) {
+      return { success: false, message: 'Số lượng hoặc ngày không hợp lệ' };
+    }
+
+    const dataOrder = {
+      user_id,
+      serviceTypeId
+    }
+
+    // const keys = await this.proxyService.buyKeys(quantity, days, user_id);
+    // return {
+    //   success: true,
+    //   message: 'Tạo key thành công',
+    //   total: keys.length,
+    //   data: keys.map(k => ({
+    //     key: k.key,
+    //     expired_at: k.expired_at,
+    //     expired_date: new Date(k.expired_at * 1000).toISOString(),
+    //   })),
+    // };
+  }
+
+  @Get('all')
+  @Public()
+  async getAllProxies() {
+    const proxies = await this.proxyService.getAllProxies();
+    console.log('dsa');
+    
+    return {
+      success: true,
+      total: proxies.length,
+      data: proxies,
+    };
   }
 }
