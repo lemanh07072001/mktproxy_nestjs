@@ -305,54 +305,160 @@ export class ProxyController {
     }
   }
 
+  // API lấy proxy (tự động xoay mỗi phút)
   @Get('get/:key')
   @Public()
   async getProxy(@Param('key') key: string) {
-    const data = await this.proxyService.getProxyForKey(key);
-    return {
-      success: true,
-      key,
-      proxy: data?.proxy,
-      reused: data?.reused,
-    };
+    try {
+      const data = await this.proxyService.getProxyForKey(key);
+
+      if (!data || !data.proxy) {
+        return {
+          success: false,
+          message: 'Không còn proxy khả dụng',
+          error: 'NO_PROXY_AVAILABLE',
+        };
+      }
+
+      // Format proxy string
+      const proxyStr = data.proxy.user && data.proxy.pass
+        ? `${data.proxy.user}:${data.proxy.pass}@${data.proxy.host}:${data.proxy.port}`
+        : `${data.proxy.host}:${data.proxy.port}`;
+
+      return {
+        success: true,
+        key,
+        proxy: proxyStr,
+        host: data.proxy.host,
+        port: data.proxy.port,
+        user: data.proxy.user,
+        pass: data.proxy.pass,
+        reused: data.reused,
+        message: data.reused
+          ? 'Proxy hiện tại (chưa đến thời gian xoay)'
+          : 'Proxy mới đã được xoay',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+        error: error.name,
+      };
+    }
   }
 
-  // Mua key
-  @Post('buy')
-  async buy(
-    @Req() req,
-    @Body()
-    body: {
-      quantity: number;
-      days: number;
-      serviceTypeId: number;
-    },
-  ) {
-    const user = (req as any)?.user;
-    const user_id = user?.sub ?? user?.id;
+  // API xoay proxy ngay lập tức
+  @Get('rotate/:key')
+  @Public()
+  async rotateProxy(@Param('key') key: string) {
+    try {
+      await this.proxyService.validateKey(key);
 
-    const { quantity, days, serviceTypeId } = body;
+      // Force rotation by clearing cache
+      const currentProxy = await this.proxyService['redis'].get(
+        `proxy:current:${key}`
+      );
 
-    if (!quantity || !days || quantity <= 0 || days <= 0) {
-      return { success: false, message: 'Số lượng hoặc ngày không hợp lệ' };
+      const data = await this.proxyService['rotateProxy'](
+        key,
+        currentProxy ? JSON.parse(currentProxy) : null
+      );
+
+      if (!data || !data.proxy) {
+        return {
+          success: false,
+          message: 'Không còn proxy khả dụng',
+          error: 'NO_PROXY_AVAILABLE',
+        };
+      }
+
+      const proxyStr = data.proxy.user && data.proxy.pass
+        ? `${data.proxy.user}:${data.proxy.pass}@${data.proxy.host}:${data.proxy.port}`
+        : `${data.proxy.host}:${data.proxy.port}`;
+
+      return {
+        success: true,
+        key,
+        proxy: proxyStr,
+        host: data.proxy.host,
+        port: data.proxy.port,
+        user: data.proxy.user,
+        pass: data.proxy.pass,
+        message: 'Proxy đã được xoay thành công',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+        error: error.name,
+      };
     }
+  }
 
-    const dataOrder = {
-      user_id,
-      serviceTypeId,
-    };
+  // API mua key proxy xoay
+  @Post('buy-key')
+  async buyProxyKey(
+    @Req() req,
+    @Body() body: { quantity?: number; days?: number },
+  ) {
+    try {
+      const user = (req as any)?.user;
+      const user_id = user?.sub ?? user?.id;
 
-    // const keys = await this.proxyService.buyKeys(quantity, days, user_id);
-    // return {
-    //   success: true,
-    //   message: 'Tạo key thành công',
-    //   total: keys.length,
-    //   data: keys.map(k => ({
-    //     key: k.key,
-    //     expired_at: k.expired_at,
-    //     expired_date: new Date(k.expired_at * 1000).toISOString(),
-    //   })),
-    // };
+      if (!user_id) {
+        return {
+          success: false,
+          message: 'Unauthorized',
+          error: 'UNAUTHORIZED',
+        };
+      }
+
+      const { quantity = 1, days = 30 } = body;
+
+      console.log('📦 Buy-key request:', { body, quantity, days, user_id });
+
+      const result = await this.proxyService.buyKeys(user_id, quantity, days);
+
+      return {
+        success: true,
+        message: `Tạo ${result.length} key thành công`,
+        total: result.length,
+        data: result,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+        error: error.name,
+      };
+    }
+  }
+
+  // API test mua key không cần auth (chỉ để test)
+  @Post('buy-key-test')
+  @Public()
+  async buyProxyKeyTest(@Body() body: { quantity?: number; days?: number }) {
+    try {
+      const { quantity = 1, days = 30 } = body;
+
+      console.log('📦 Buy-key-test request:', { body, quantity, days });
+
+      const test_user_id = 'test_user_123';
+      const result = await this.proxyService.buyKeys(test_user_id, quantity, days);
+
+      return {
+        success: true,
+        message: `Tạo ${result.length} key thành công`,
+        total: result.length,
+        data: result,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+        error: error.name,
+      };
+    }
   }
 
   @Get('all')

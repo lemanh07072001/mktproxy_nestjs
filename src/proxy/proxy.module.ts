@@ -4,13 +4,19 @@ import { ProxyService } from './proxy.service';
 import { ProxyController } from './proxy.controller';
 import { ApikeyModule } from 'src/apikey/apikey.module';
 import { Proxy, ProxySchema } from './schemas/proxy.schema';
+import { ProxyKey, ProxyKeySchema } from './schemas/proxy-key.schema';
 import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   controllers: [ProxyController],
   providers: [ProxyService],
-  imports: [ApikeyModule, AuthModule,  MongooseModule.forFeature([
-    { name: Proxy.name, schema: ProxySchema },
-  ]),],
+  imports: [
+    ApikeyModule,
+    AuthModule,
+    MongooseModule.forFeature([
+      { name: Proxy.name, schema: ProxySchema },
+      { name: ProxyKey.name, schema: ProxyKeySchema },
+    ]),
+  ],
 })
 export class ProxyModule {}
