@@ -5,7 +5,7 @@ import { Document } from 'mongoose';
 @Schema({ collection: 'proxies' })
 export class Proxy {
   @Prop({ required: true })
-  host: string;
+  ip: string;
 
   @Prop({ required: true })
   port: number;
