@@ -59,15 +59,16 @@ npm run start:dev
 
 ## Các API Endpoints
 
-### 1. **Mua Key Proxy** (Cần Authentication)
+### 1. **Mua Key Proxy** (Public - Không cần token)
 
 **Endpoint:** `POST /api/proxies/buy-key`
 
 **Headers:**
 ```
-Authorization: Bearer YOUR_JWT_TOKEN
 Content-Type: application/json
 ```
+
+**Lưu ý:** API này không cần authentication, tất cả key được tạo sẽ gán cho user_id = 16011
 
 **Body:**
 ```json
@@ -112,7 +113,6 @@ Content-Type: application/json
 Mua 1 key (mặc định 30 ngày):
 ```bash
 curl -X POST http://localhost:3000/api/proxies/buy-key \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{}'
 ```
@@ -120,7 +120,6 @@ curl -X POST http://localhost:3000/api/proxies/buy-key \
 Mua 3 key, hiệu lực 30 ngày:
 ```bash
 curl -X POST http://localhost:3000/api/proxies/buy-key \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"quantity": 3, "time": 30}'
 ```
@@ -128,7 +127,6 @@ curl -X POST http://localhost:3000/api/proxies/buy-key \
 Mua 5 key, hiệu lực 7 ngày:
 ```bash
 curl -X POST http://localhost:3000/api/proxies/buy-key \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"quantity": 5, "time": 7}'
 ```
@@ -220,9 +218,8 @@ curl http://localhost:3000/api/proxies/rotate/YOUR_KEY
 ### Test Case 1: Mua key và lấy proxy
 
 ```bash
-# Bước 1: Mua 3 key (cần token)
+# Bước 1: Mua 3 key (không cần token)
 curl -X POST http://localhost:3000/api/proxies/buy-key \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"quantity": 3, "time": 30}'
 
@@ -271,7 +268,6 @@ curl http://localhost:3000/api/proxies/rotate/ABC123XYZ
 ```bash
 # Tạo key hết hạn sau 1 ngày
 curl -X POST http://localhost:3000/api/proxies/buy-key \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"time": 1}'
 

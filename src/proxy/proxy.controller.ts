@@ -321,9 +321,10 @@ export class ProxyController {
       }
 
       // Format proxy string theo định dạng: ip:port:user:pass
-      const proxyStr = data.proxy.user && data.proxy.pass
-        ? `${data.proxy.ip}:${data.proxy.port}:${data.proxy.user}:${data.proxy.pass}`
-        : `${data.proxy.ip}:${data.proxy.port}`;
+      const proxyStr =
+        data.proxy.user && data.proxy.pass
+          ? `${data.proxy.ip}:${data.proxy.port}:${data.proxy.user}:${data.proxy.pass}`
+          : `${data.proxy.ip}:${data.proxy.port}`;
 
       const response: any = {
         success: true,
@@ -334,7 +335,11 @@ export class ProxyController {
         pass: data.proxy.pass,
       };
 
-      if (data.reused && 'timeRemaining' in data && data.timeRemaining !== undefined) {
+      if (
+        data.reused &&
+        'timeRemaining' in data &&
+        data.timeRemaining !== undefined
+      ) {
         response.message = `Proxy hiện tại (xoay sau ${data.timeRemaining}s)`;
         response.timeRemaining = data.timeRemaining;
       } else {
@@ -361,12 +366,12 @@ export class ProxyController {
 
       // Force rotation by clearing cache
       const currentProxy = await this.proxyService['redis'].get(
-        `proxy:current:${key}`
+        `proxy:current:${key}`,
       );
 
       const data = await this.proxyService['rotateProxy'](
         key,
-        currentProxy ? JSON.parse(currentProxy) : null
+        currentProxy ? JSON.parse(currentProxy) : null,
       );
 
       if (!data || !data.proxy) {
@@ -377,9 +382,10 @@ export class ProxyController {
         };
       }
 
-      const proxyStr = data.proxy.user && data.proxy.pass
-        ? `${data.proxy.user}:${data.proxy.pass}@${data.proxy.host}:${data.proxy.port}`
-        : `${data.proxy.host}:${data.proxy.port}`;
+      const proxyStr =
+        data.proxy.user && data.proxy.pass
+          ? `${data.proxy.user}:${data.proxy.pass}@${data.proxy.host}:${data.proxy.port}`
+          : `${data.proxy.host}:${data.proxy.port}`;
 
       return {
         success: true,
@@ -402,23 +408,13 @@ export class ProxyController {
 
   // API mua key proxy xoay
   @Post('buy-key')
+  @Public()
   async buyProxyKey(
     @Req() req,
-    @Body() body: { quantity?: number; time?: number },
+    @Body() body: { quantity?: number; time?: number; user_id?: null },
   ) {
     try {
-      const user = (req as any)?.user;
-      const user_id = user?.sub ?? user?.id;
-
-      if (!user_id) {
-        return {
-          success: false,
-          message: 'Unauthorized',
-          error: 'UNAUTHORIZED',
-        };
-      }
-
-      const { quantity = 1, time = 30 } = body;
+      const { quantity, time, user_id } = body;
 
       console.log('📦 Buy-key request:', { body, quantity, time, user_id });
 
@@ -449,7 +445,11 @@ export class ProxyController {
       console.log('📦 Buy-key-test request:', { body, quantity, time });
 
       const test_user_id = 'test_user_123';
-      const result = await this.proxyService.buyKeys(test_user_id, quantity, time);
+      const result = await this.proxyService.buyKeys(
+        test_user_id,
+        quantity,
+        time,
+      );
 
       return {
         success: true,
