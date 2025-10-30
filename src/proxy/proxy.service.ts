@@ -104,6 +104,8 @@ export class ProxyService {
       { $sample: { size: 1 } },
     ]);
 
+    console.log(newProxy);
+
     if (!newProxy.length) {
       this.logger.warn(`Không còn proxy khả dụng cho key ${key}`);
       return null;
