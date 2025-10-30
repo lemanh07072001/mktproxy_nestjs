@@ -320,15 +320,15 @@ export class ProxyController {
         };
       }
 
-      // Format proxy string
+      // Format proxy string theo định dạng: ip:port:user:pass
       const proxyStr = data.proxy.user && data.proxy.pass
-        ? `${data.proxy.user}:${data.proxy.pass}@${data.proxy.host}:${data.proxy.port}`
+        ? `${data.proxy.host}:${data.proxy.port}:${data.proxy.user}:${data.proxy.pass}`
         : `${data.proxy.host}:${data.proxy.port}`;
 
       const response: any = {
         success: true,
         proxy: proxyStr,
-        host: data.proxy.host,
+        ip: data.proxy.host,
         port: data.proxy.port,
         user: data.proxy.user,
         pass: data.proxy.pass,

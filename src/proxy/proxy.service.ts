@@ -161,7 +161,9 @@ export class ProxyService {
       keys.push({
         key: newKey.key,
         expired_at: newKey.expired_at,
-        expired_date: dayjs.unix(newKey.expired_at).format('YYYY-MM-DD HH:mm:ss'),
+        expired_date: dayjs
+          .unix(newKey.expired_at)
+          .format('YYYY-MM-DD HH:mm:ss'),
       });
 
       this.logger.log(

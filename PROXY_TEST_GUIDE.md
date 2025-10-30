@@ -143,8 +143,8 @@ curl -X POST http://localhost:3000/api/proxies/buy-key \
 ```json
 {
   "success": true,
-  "proxy": "user1:pass1@192.168.1.1:8080",
-  "host": "192.168.1.1",
+  "proxy": "192.168.1.1:8080:user1:pass1",
+  "ip": "192.168.1.1",
   "port": 8080,
   "user": "user1",
   "pass": "pass1",
@@ -157,8 +157,8 @@ curl -X POST http://localhost:3000/api/proxies/buy-key \
 ```json
 {
   "success": true,
-  "proxy": "user1:pass1@192.168.1.1:8080",
-  "host": "192.168.1.1",
+  "proxy": "192.168.1.1:8080:user1:pass1",
+  "ip": "192.168.1.1",
   "port": 8080,
   "user": "user1",
   "pass": "pass1",
@@ -166,6 +166,9 @@ curl -X POST http://localhost:3000/api/proxies/buy-key \
   "timeRemaining": 45
 }
 ```
+
+**Lưu ý:**
+- Format proxy: `ip:port:user:pass` (nếu có auth) hoặc `ip:port` (nếu không có auth)
 
 **Giải thích:**
 - `timeRemaining`: Số giây còn lại trước khi proxy tự động xoay (đếm ngược từ 60 về 0)
