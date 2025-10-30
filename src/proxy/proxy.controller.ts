@@ -411,10 +411,10 @@ export class ProxyController {
   @Public()
   async buyProxyKey(
     @Req() req,
-    @Body() body: { quantity?: number; time?: number; user_id?: null },
+    @Body() body: { quantity?: number; time?: number; user_id?: string },
   ) {
     try {
-      const { quantity, time, user_id } = body;
+      const { quantity = 1, time = 30, user_id = 'guest_user' } = body;
 
       console.log('📦 Buy-key request:', { body, quantity, time, user_id });
 
