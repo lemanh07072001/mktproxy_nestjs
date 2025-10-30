@@ -59,7 +59,15 @@ export class ProxyService {
 
     // Nếu chưa đến thời gian xoay và có proxy hiện tại -> trả về proxy cũ
     if (lastRotate && now - Number(lastRotate) < this.ROTATE_SECONDS && currentProxy) {
-      return { proxy: JSON.parse(currentProxy), reused: true };
+      const timeElapsed = now - Number(lastRotate);
+      const timeRemaining = this.ROTATE_SECONDS - timeElapsed;
+
+      return {
+        proxy: JSON.parse(currentProxy),
+        reused: true,
+        timeRemaining, // Thời gian còn lại (giây)
+        nextRotateIn: timeRemaining, // Alias rõ ràng hơn
+      };
     }
 
     // Xoay proxy mới

@@ -325,7 +325,7 @@ export class ProxyController {
         ? `${data.proxy.user}:${data.proxy.pass}@${data.proxy.host}:${data.proxy.port}`
         : `${data.proxy.host}:${data.proxy.port}`;
 
-      return {
+      const response: any = {
         success: true,
         key,
         proxy: proxyStr,
@@ -334,10 +334,19 @@ export class ProxyController {
         user: data.proxy.user,
         pass: data.proxy.pass,
         reused: data.reused,
-        message: data.reused
-          ? 'Proxy hiện tại (chưa đến thời gian xoay)'
-          : 'Proxy mới đã được xoay',
       };
+
+      if (data.reused && data.timeRemaining !== undefined) {
+        response.message = `Proxy hiện tại (xoay sau ${data.timeRemaining}s)`;
+        response.timeRemaining = data.timeRemaining;
+        response.nextRotateIn = data.timeRemaining;
+      } else {
+        response.message = 'Proxy mới đã được xoay';
+        response.timeRemaining = 60;
+        response.nextRotateIn = 60;
+      }
+
+      return response;
     } catch (error) {
       return {
         success: false,

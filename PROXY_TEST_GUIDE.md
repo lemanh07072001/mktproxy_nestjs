@@ -150,11 +150,13 @@ curl -X POST http://localhost:3000/api/proxies/buy-key \
   "user": "user1",
   "pass": "pass1",
   "reused": false,
-  "message": "Proxy mới đã được xoay"
+  "message": "Proxy mới đã được xoay",
+  "timeRemaining": 60,
+  "nextRotateIn": 60
 }
 ```
 
-**Response trong vòng 60s (proxy cũ):**
+**Response trong vòng 60s (proxy cũ - ví dụ còn 45s):**
 ```json
 {
   "success": true,
@@ -165,9 +167,16 @@ curl -X POST http://localhost:3000/api/proxies/buy-key \
   "user": "user1",
   "pass": "pass1",
   "reused": true,
-  "message": "Proxy hiện tại (chưa đến thời gian xoay)"
+  "message": "Proxy hiện tại (xoay sau 45s)",
+  "timeRemaining": 45,
+  "nextRotateIn": 45
 }
 ```
+
+**Giải thích:**
+- `timeRemaining`: Số giây còn lại trước khi proxy tự động xoay
+- `nextRotateIn`: Alias của timeRemaining (rõ nghĩa hơn)
+- `message`: Hiển thị thông báo kèm thời gian đếm ngược
 
 **Test với cURL:**
 ```bash
