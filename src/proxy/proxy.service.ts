@@ -136,7 +136,7 @@ export class ProxyService {
   }
 
   // API mua key (nhiều key cùng lúc)
-  async buyKeys(user_id: string, quantity: number = 1, time: number = 30) {
+  async buyKeys(quantity: number = 1, time: number = 30, user_id?: string) {
     if (quantity <= 0 || quantity > 100) {
       throw new BadRequestException('Số lượng phải từ 1-100');
     }
@@ -154,7 +154,7 @@ export class ProxyService {
 
       const newKey = await this.proxyKeyModel.create({
         key,
-        user_id,
+        user_id: user_id || null,
         expired_at: expiredAt,
         active: true,
       });
@@ -168,12 +168,12 @@ export class ProxyService {
       });
 
       this.logger.log(
-        `✅ Tạo key ${i + 1}/${quantity}: ${key} cho user ${user_id}`,
+        `✅ Tạo key ${i + 1}/${quantity}: ${key}`,
       );
     }
 
     this.logger.log(
-      `✅ Hoàn thành tạo ${quantity} key cho user ${user_id}, hết hạn: ${dayjs.unix(expiredAt).format('YYYY-MM-DD HH:mm:ss')}`,
+      `✅ Hoàn thành tạo ${quantity} key, hết hạn: ${dayjs.unix(expiredAt).format('YYYY-MM-DD HH:mm:ss')}`,
     );
 
     return keys;

@@ -411,14 +411,14 @@ export class ProxyController {
   @Public()
   async buyProxyKey(
     @Req() req,
-    @Body() body: { quantity?: number; time?: number; user_id?: string },
+    @Body() body: { quantity?: number; time?: number },
   ) {
     try {
-      const { quantity = 1, time = 30, user_id = 'guest_user' } = body;
+      const { quantity = 1, time = 30 } = body;
 
-      console.log('📦 Buy-key request:', { body, quantity, time, user_id });
+      console.log('📦 Buy-key request:', { body, quantity, time });
 
-      const result = await this.proxyService.buyKeys(user_id, quantity, time);
+      const result = await this.proxyService.buyKeys(quantity, time);
 
       return {
         success: true,
@@ -444,12 +444,7 @@ export class ProxyController {
 
       console.log('📦 Buy-key-test request:', { body, quantity, time });
 
-      const test_user_id = 'test_user_123';
-      const result = await this.proxyService.buyKeys(
-        test_user_id,
-        quantity,
-        time,
-      );
+      const result = await this.proxyService.buyKeys(quantity, time);
 
       return {
         success: true,

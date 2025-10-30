@@ -7,8 +7,8 @@ export class ProxyKey {
   @Prop({ required: true, unique: true })
   key: string;
 
-  @Prop({ required: true })
-  user_id: string;
+  @Prop({ required: false })
+  user_id?: string;
 
   @Prop({ required: true })
   expired_at: number; // timestamp Unix
