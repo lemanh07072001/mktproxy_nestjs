@@ -100,7 +100,7 @@ export class ProxyService {
 
     // tìm 1 proxy ngẫu nhiên không nằm trong exclude
     const newProxy = await this.proxyModel.aggregate([
-      { $match: { host: { $nin: exclude } } },
+      { $match: { ip: { $nin: exclude } } },
       { $sample: { size: 1 } },
     ]);
 
@@ -111,11 +111,11 @@ export class ProxyService {
 
     const proxy = newProxy[0];
 
-    const proxyStr = `${proxy.host}:${proxy.port}`;
+    const proxyStr = `${proxy.ip}:${proxy.port}`;
 
     const multi = this.redis.multi();
 
-    if (oldProxy) multi.srem(inUseKey, `${oldProxy.host}:${oldProxy.port}`);
+    if (oldProxy) multi.srem(inUseKey, `${oldProxy.ip}:${oldProxy.port}`);
 
     multi.sadd(inUseKey, proxyStr);
     multi.set(currentKey(key), JSON.stringify(proxy));
