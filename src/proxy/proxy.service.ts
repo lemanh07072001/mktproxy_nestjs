@@ -9,6 +9,12 @@ import { lastRotateKey, currentKey, inUseKey, recentKey } from 'src/common/key.c
 import { randomBytes } from 'crypto';
 import dayjs from 'dayjs';
 
+export interface KeyResponse {
+  key: string;
+  expired_at: number;
+  expired_date: string;
+}
+
 
 @Injectable()
 export class ProxyService {
@@ -115,7 +121,7 @@ export class ProxyService {
     }
 
     const expiredAt = dayjs().add(days, 'day').unix(); // timestamp
-    const keys = [];
+    const keys: KeyResponse[] = [];
 
     // Tạo nhiều key
     for (let i = 0; i < quantity; i++) {
