@@ -136,16 +136,16 @@ export class ProxyService {
   }
 
   // API mua key (nhiều key cùng lúc)
-  async buyKeys(user_id: string, quantity: number = 1, days: number = 30) {
+  async buyKeys(user_id: string, quantity: number = 1, time: number = 30) {
     if (quantity <= 0 || quantity > 100) {
       throw new BadRequestException('Số lượng phải từ 1-100');
     }
 
-    if (days <= 0 || days > 365) {
+    if (time <= 0 || time > 365) {
       throw new BadRequestException('Số ngày phải từ 1-365');
     }
 
-    const expiredAt = dayjs().add(days, 'day').unix(); // timestamp
+    const expiredAt = dayjs().add(time, 'day').unix(); // timestamp
     const keys: KeyResponse[] = [];
 
     // Tạo nhiều key

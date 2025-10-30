@@ -73,13 +73,13 @@ Content-Type: application/json
 ```json
 {
   "quantity": 3,
-  "days": 30
+  "time": 30
 }
 ```
 
 **Tham số:**
 - `quantity` (optional): Số lượng key muốn mua (1-100). Mặc định: 1
-- `days` (optional): Số ngày hiệu lực (1-365). Mặc định: 30
+- `time` (optional): Số ngày hiệu lực (1-365). Mặc định: 30
 
 **Response thành công (mua 3 key):**
 ```json
@@ -122,7 +122,7 @@ Mua 3 key, hiệu lực 30 ngày:
 curl -X POST http://localhost:3000/api/proxies/buy-key \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"quantity": 3, "days": 30}'
+  -d '{"quantity": 3, "time": 30}'
 ```
 
 Mua 5 key, hiệu lực 7 ngày:
@@ -130,7 +130,7 @@ Mua 5 key, hiệu lực 7 ngày:
 curl -X POST http://localhost:3000/api/proxies/buy-key \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"quantity": 5, "days": 7}'
+  -d '{"quantity": 5, "time": 7}'
 ```
 
 ---
@@ -224,7 +224,7 @@ curl http://localhost:3000/api/proxies/rotate/YOUR_KEY
 curl -X POST http://localhost:3000/api/proxies/buy-key \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"quantity": 3, "days": 30}'
+  -d '{"quantity": 3, "time": 30}'
 
 # Lưu lại một trong các key nhận được, ví dụ: ABC123XYZ
 
@@ -273,7 +273,7 @@ curl http://localhost:3000/api/proxies/rotate/ABC123XYZ
 curl -X POST http://localhost:3000/api/proxies/buy-key \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"days": 1}'
+  -d '{"time": 1}'
 
 # Lấy key, ví dụ: EXPIRED_KEY
 

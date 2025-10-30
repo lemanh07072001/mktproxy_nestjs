@@ -404,7 +404,7 @@ export class ProxyController {
   @Post('buy-key')
   async buyProxyKey(
     @Req() req,
-    @Body() body: { quantity?: number; days?: number },
+    @Body() body: { quantity?: number; time?: number },
   ) {
     try {
       const user = (req as any)?.user;
@@ -418,11 +418,11 @@ export class ProxyController {
         };
       }
 
-      const { quantity = 1, days = 30 } = body;
+      const { quantity = 1, time = 30 } = body;
 
-      console.log('📦 Buy-key request:', { body, quantity, days, user_id });
+      console.log('📦 Buy-key request:', { body, quantity, time, user_id });
 
-      const result = await this.proxyService.buyKeys(user_id, quantity, days);
+      const result = await this.proxyService.buyKeys(user_id, quantity, time);
 
       return {
         success: true,
@@ -442,14 +442,14 @@ export class ProxyController {
   // API test mua key không cần auth (chỉ để test)
   @Post('buy-key-test')
   @Public()
-  async buyProxyKeyTest(@Body() body: { quantity?: number; days?: number }) {
+  async buyProxyKeyTest(@Body() body: { quantity?: number; time?: number }) {
     try {
-      const { quantity = 1, days = 30 } = body;
+      const { quantity = 1, time = 30 } = body;
 
-      console.log('📦 Buy-key-test request:', { body, quantity, days });
+      console.log('📦 Buy-key-test request:', { body, quantity, time });
 
       const test_user_id = 'test_user_123';
-      const result = await this.proxyService.buyKeys(test_user_id, quantity, days);
+      const result = await this.proxyService.buyKeys(test_user_id, quantity, time);
 
       return {
         success: true,
