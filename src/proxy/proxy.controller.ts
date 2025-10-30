@@ -327,23 +327,19 @@ export class ProxyController {
 
       const response: any = {
         success: true,
-        key,
         proxy: proxyStr,
         host: data.proxy.host,
         port: data.proxy.port,
         user: data.proxy.user,
         pass: data.proxy.pass,
-        reused: data.reused,
       };
 
-      if (data.reused && data.timeRemaining !== undefined) {
+      if (data.reused && 'timeRemaining' in data && data.timeRemaining !== undefined) {
         response.message = `Proxy hiện tại (xoay sau ${data.timeRemaining}s)`;
         response.timeRemaining = data.timeRemaining;
-        response.nextRotateIn = data.timeRemaining;
       } else {
         response.message = 'Proxy mới đã được xoay';
         response.timeRemaining = 60;
-        response.nextRotateIn = 60;
       }
 
       return response;

@@ -1,11 +1,21 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Proxy, ProxyDocument } from './schemas/proxy.schema';
 import { ProxyKey, ProxyKeyDocument } from './schemas/proxy-key.schema';
 import { Model } from 'mongoose';
 import Redis from 'ioredis';
 import { getRedisClient } from 'src/common/redis';
-import { lastRotateKey, currentKey, inUseKey, recentKey } from 'src/common/key.cache';
+import {
+  lastRotateKey,
+  currentKey,
+  inUseKey,
+  recentKey,
+} from 'src/common/key.cache';
 import { randomBytes } from 'crypto';
 import dayjs from 'dayjs';
 
@@ -14,7 +24,6 @@ export interface KeyResponse {
   expired_at: number;
   expired_date: string;
 }
-
 
 @Injectable()
 export class ProxyService {
@@ -29,7 +38,7 @@ export class ProxyService {
     @InjectModel(ProxyKey.name) private proxyKeyModel: Model<ProxyKeyDocument>,
   ) {
     this.redis = getRedisClient();
-}
+  }
 
   // Validate key trước khi sử dụng
   async validateKey(key: string): Promise<ProxyKeyDocument> {
@@ -58,7 +67,11 @@ export class ProxyService {
     );
 
     // Nếu chưa đến thời gian xoay và có proxy hiện tại -> trả về proxy cũ
-    if (lastRotate && now - Number(lastRotate) < this.ROTATE_SECONDS && currentProxy) {
+    if (
+      lastRotate &&
+      now - Number(lastRotate) < this.ROTATE_SECONDS &&
+      currentProxy
+    ) {
       const timeElapsed = now - Number(lastRotate);
       const timeRemaining = this.ROTATE_SECONDS - timeElapsed;
 
@@ -71,7 +84,10 @@ export class ProxyService {
     }
 
     // Xoay proxy mới
-    return this.rotateProxy(key, currentProxy ? JSON.parse(currentProxy) : null);
+    return this.rotateProxy(
+      key,
+      currentProxy ? JSON.parse(currentProxy) : null,
+    );
   }
 
   private async rotateProxy(key: string, oldProxy?: any) {
@@ -81,10 +97,10 @@ export class ProxyService {
       this.redis.lrange(recentKey(key), 0, -1),
     ]);
     const exclude = [...inuse, ...recent];
-    
+
     // tìm 1 proxy ngẫu nhiên không nằm trong exclude
     const newProxy = await this.proxyModel.aggregate([
-      { $match: {host: { $nin: exclude } } },
+      { $match: { host: { $nin: exclude } } },
       { $sample: { size: 1 } },
     ]);
 
@@ -148,10 +164,14 @@ export class ProxyService {
         expired_date: dayjs.unix(newKey.expired_at).format('YYYY-MM-DD HH:mm:ss'),
       });
 
-      this.logger.log(`✅ Tạo key ${i + 1}/${quantity}: ${key} cho user ${user_id}`);
+      this.logger.log(
+        `✅ Tạo key ${i + 1}/${quantity}: ${key} cho user ${user_id}`,
+      );
     }
 
-    this.logger.log(`✅ Hoàn thành tạo ${quantity} key cho user ${user_id}, hết hạn: ${dayjs.unix(expiredAt).format('YYYY-MM-DD HH:mm:ss')}`);
+    this.logger.log(
+      `✅ Hoàn thành tạo ${quantity} key cho user ${user_id}, hết hạn: ${dayjs.unix(expiredAt).format('YYYY-MM-DD HH:mm:ss')}`,
+    );
 
     return keys;
   }
@@ -163,10 +183,8 @@ export class ProxyService {
   async getKeyDetail(key: string) {
     return this.proxyModel.findOne({ key });
   }
-
 }
 
 function now() {
   return Math.floor(Date.now() / 1000);
 }
-

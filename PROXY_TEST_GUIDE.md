@@ -143,16 +143,13 @@ curl -X POST http://localhost:3000/api/proxies/buy-key \
 ```json
 {
   "success": true,
-  "key": "D8f3Y1MSh4lG7k_tFmwOkg",
   "proxy": "user1:pass1@192.168.1.1:8080",
   "host": "192.168.1.1",
   "port": 8080,
   "user": "user1",
   "pass": "pass1",
-  "reused": false,
   "message": "Proxy mới đã được xoay",
-  "timeRemaining": 60,
-  "nextRotateIn": 60
+  "timeRemaining": 60
 }
 ```
 
@@ -160,22 +157,18 @@ curl -X POST http://localhost:3000/api/proxies/buy-key \
 ```json
 {
   "success": true,
-  "key": "D8f3Y1MSh4lG7k_tFmwOkg",
   "proxy": "user1:pass1@192.168.1.1:8080",
   "host": "192.168.1.1",
   "port": 8080,
   "user": "user1",
   "pass": "pass1",
-  "reused": true,
   "message": "Proxy hiện tại (xoay sau 45s)",
-  "timeRemaining": 45,
-  "nextRotateIn": 45
+  "timeRemaining": 45
 }
 ```
 
 **Giải thích:**
-- `timeRemaining`: Số giây còn lại trước khi proxy tự động xoay
-- `nextRotateIn`: Alias của timeRemaining (rõ nghĩa hơn)
+- `timeRemaining`: Số giây còn lại trước khi proxy tự động xoay (đếm ngược từ 60 về 0)
 - `message`: Hiển thị thông báo kèm thời gian đếm ngược
 
 **Test với cURL:**
