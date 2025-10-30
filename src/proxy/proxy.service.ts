@@ -104,8 +104,6 @@ export class ProxyService {
       { $sample: { size: 1 } },
     ]);
 
-    console.log(newProxy);
-
     if (!newProxy.length) {
       this.logger.warn(`Không còn proxy khả dụng cho key ${key}`);
       return null;
@@ -129,6 +127,7 @@ export class ProxyService {
 
     this.logger.log(`🔄 Xoay proxy cho key ${key} -> ${proxyStr}`);
 
+    console.log(proxy);
     return { proxy, reused: false };
   }
 
