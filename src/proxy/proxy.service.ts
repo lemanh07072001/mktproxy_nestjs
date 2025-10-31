@@ -18,6 +18,8 @@ import {
 } from 'src/common/key.cache';
 import { randomBytes } from 'crypto';
 import dayjs from 'dayjs';
+import { ApikeyService } from '../apikey/apikey.service';
+import { ApiKeyStatus } from '../apikey/enum/apikey.enum';
 
 export interface KeyResponse {
   key: string;
@@ -36,24 +38,31 @@ export class ProxyService {
   constructor(
     @InjectModel(Proxy.name) private proxyModel: Model<ProxyDocument>,
     @InjectModel(ProxyKey.name) private proxyKeyModel: Model<ProxyKeyDocument>,
+    private readonly apikeyService: ApikeyService,
   ) {
     this.redis = getRedisClient();
   }
 
   // Validate key trước khi sử dụng
-  async validateKey(key: string): Promise<ProxyKeyDocument> {
-    const proxyKey = await this.proxyKeyModel.findOne({ key, active: true });
+  async validateKey(key: string) {
+    const apiKey = await this.apikeyService.getApiKeyDetails(key);
 
-    if (!proxyKey) {
-      throw new NotFoundException('Key không tồn tại hoặc đã bị vô hiệu hóa');
+    if (!apiKey) {
+      throw new NotFoundException('Key không tồn tại');
     }
 
-    const now = Math.floor(Date.now() / 1000);
-    if (proxyKey.expired_at && proxyKey.expired_at < now) {
+    // Kiểm tra trạng thái active
+    if (apiKey.status !== ApiKeyStatus.ACTIVE) {
+      throw new BadRequestException('Key đã bị vô hiệu hóa');
+    }
+
+    // Kiểm tra hết hạn
+    const now = new Date();
+    if (apiKey.expired_at && new Date(apiKey.expired_at) < now) {
       throw new BadRequestException('Key đã hết hạn');
     }
 
-    return proxyKey;
+    return apiKey;
   }
 
   async getProxyForKey(key: string) {
