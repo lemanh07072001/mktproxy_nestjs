@@ -185,6 +185,44 @@ export class ProxyController {
             error: 'ERROR_PROXY',
           };
         }
+
+        case 'mktproxy.com': {
+          const dataResponse = await this.getProxy(key);
+
+          const proxyArray = dataResponse?.proxy.split(':');
+
+          console.log(dataResponse);
+
+          const now = Math.floor(Date.now() / 1000);
+          const setAt = now; // Timestamp khi set vào Redis
+          const expiresAt = now + 60; // Timestamp khi hết hạn
+
+          const dataJson = {
+            realIpAddress: proxyArray[0],
+            http: proxyArray[0],
+            httpPort: proxyArray[1],
+            host: proxyArray[0],
+            setAt, // Lưu timestamp set vào Redis
+            expiresAt, // Lưu timestamp hết hạn
+            timeRemaining: 60, // Thời gian ban đầu
+          };
+
+          // Set TTL = 60s
+          await redisSet(PROXY_XOAY(key), dataJson, 60);
+
+          // Bỏ setAt và expiresAt khỏi response
+          const { setAt: _, expiresAt: __, ...dataWithoutTimestamps } = dataJson;
+
+          return {
+            data: {
+              ...dataWithoutTimestamps,
+              timeRemaining: dataResponse.timeRemaining, // Trả về thời gian thực tế
+            },
+            success: true,
+            code: 200,
+            status: 'SUCCESS',
+          };
+        }
       }
     } catch (error: unknown) {
       if (error instanceof Error) {
@@ -213,6 +251,25 @@ export class ProxyController {
       const cachedProxy = await redisGet(PROXY_XOAY(key));
 
       if (cachedProxy) {
+        // Tính timeRemaining từ timestamp nếu có
+        if (cachedProxy.expiresAt) {
+          const now = Math.floor(Date.now() / 1000);
+          const timeRemaining = Math.max(0, cachedProxy.expiresAt - now);
+
+          // Bỏ setAt và expiresAt khỏi response
+          const { setAt, expiresAt, ...dataWithoutTimestamps } = cachedProxy;
+
+          return {
+            data: {
+              ...dataWithoutTimestamps,
+              timeRemaining,
+            },
+            success: true,
+            code: 200,
+            status: 'SUCCESS',
+          };
+        }
+
         return {
           data: cachedProxy,
           success: true,
@@ -293,6 +350,63 @@ export class ProxyController {
             code: 50000001,
             status: 'FAIL',
             error: 'ERROR_PROXY',
+          };
+        }
+
+        case 'mktproxy.com': {
+          // Kiểm tra cache trong Redis trước
+          const cachedData = await redisGet(PROXY_XOAY(key));
+
+          if (cachedData) {
+            // Tính timeRemaining từ timestamp
+            const now = Math.floor(Date.now() / 1000);
+            const timeRemaining = Math.max(0, cachedData.expiresAt - now);
+
+            // Bỏ setAt và expiresAt khỏi response
+            const { setAt, expiresAt, ...dataWithoutTimestamps } = cachedData;
+
+            return {
+              data: {
+                ...dataWithoutTimestamps,
+                timeRemaining,
+              },
+              success: true,
+              code: 200,
+              status: 'SUCCESS',
+            };
+          }
+
+          // Nếu không có cache, lấy proxy mới
+          const dataResponse = await this.getProxy(key);
+
+          const proxyArray = dataResponse?.proxy.split(':');
+
+          const now = Math.floor(Date.now() / 1000);
+          const setAt = now;
+          const expiresAt = now + 60;
+
+          const dataJson = {
+            realIpAddress: proxyArray[0],
+            http: proxyArray[0],
+            httpPort: proxyArray[1],
+            host: proxyArray[0],
+            setAt,
+            expiresAt,
+          };
+
+          await redisSet(PROXY_XOAY(key), dataJson, 60);
+
+          // Bỏ setAt và expiresAt khỏi response
+          const { setAt: _, expiresAt: __, ...dataWithoutTimestamps } = dataJson;
+
+          return {
+            data: {
+              ...dataWithoutTimestamps,
+              timeRemaining: dataResponse.timeRemaining,
+            },
+            success: true,
+            code: 200,
+            status: 'SUCCESS',
           };
         }
       }
@@ -384,18 +498,18 @@ export class ProxyController {
 
       const proxyStr =
         data.proxy.user && data.proxy.pass
-          ? `${data.proxy.user}:${data.proxy.pass}@${data.proxy.host}:${data.proxy.port}`
-          : `${data.proxy.host}:${data.proxy.port}`;
+          ? `${data.proxy.ip}:${data.proxy.port}:${data.proxy.user}:${data.proxy.pass}`
+          : `${data.proxy.ip}:${data.proxy.port}`;
 
       return {
         success: true,
-        key,
         proxy: proxyStr,
-        host: data.proxy.host,
+        ip: data.proxy.ip,
         port: data.proxy.port,
         user: data.proxy.user,
         pass: data.proxy.pass,
         message: 'Proxy đã được xoay thành công',
+        timeRemaining: 60, // Vừa xoay xong, còn 60s
       };
     } catch (error) {
       return {
