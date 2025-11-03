@@ -5,6 +5,7 @@ import {
   HttpException,
   HttpStatus,
   Param,
+  Query,
   UseGuards,
   Post,
   Body,
@@ -74,9 +75,9 @@ export class ProxyController {
     return protocol === 'socks5' ? 'socks5' : 'http';
   }
 
-  @Get('new/:key')
+  @Get('new')
   @Public()
-  async getApiKeyDetails(@Param('key') key: string) {
+  async getApiKeyDetails(@Query('key') key: string) {
     try {
       const api_key = await this.apikeyService.getApiKeyDetails(key);
       this.ensureApiKeyUsable(api_key);
@@ -211,7 +212,11 @@ export class ProxyController {
           await redisSet(PROXY_XOAY(key), dataJson, 60);
 
           // Bỏ setAt và expiresAt khỏi response
-          const { setAt: _, expiresAt: __, ...dataWithoutTimestamps } = dataJson;
+          const {
+            setAt: _,
+            expiresAt: __,
+            ...dataWithoutTimestamps
+          } = dataJson;
 
           return {
             data: {
@@ -241,9 +246,9 @@ export class ProxyController {
     }
   }
 
-  @Get('current/:key')
+  @Get('current')
   @Public()
-  async getProxyCurrent(@Param('key') key: string) {
+  async getProxyCurrent(@Query('key') key: string) {
     try {
       const api_key = await this.apikeyService.getApiKeyDetails(key);
       this.ensureApiKeyUsable(api_key);
@@ -397,7 +402,11 @@ export class ProxyController {
           await redisSet(PROXY_XOAY(key), dataJson, 60);
 
           // Bỏ setAt và expiresAt khỏi response
-          const { setAt: _, expiresAt: __, ...dataWithoutTimestamps } = dataJson;
+          const {
+            setAt: _,
+            expiresAt: __,
+            ...dataWithoutTimestamps
+          } = dataJson;
 
           return {
             data: {
@@ -420,9 +429,9 @@ export class ProxyController {
   }
 
   // API lấy proxy (tự động xoay mỗi phút)
-  @Get('get/:key')
+  @Get('get')
   @Public()
-  async getProxy(@Param('key') key: string) {
+  async getProxy(@Query('key') key: string) {
     try {
       const data = await this.proxyService.getProxyForKey(key);
 
@@ -472,9 +481,9 @@ export class ProxyController {
   }
 
   // API xoay proxy ngay lập tức
-  @Get('rotate/:key')
+  @Get('rotate')
   @Public()
-  async rotateProxy(@Param('key') key: string) {
+  async rotateProxy(@Query('key') key: string) {
     try {
       await this.proxyService.validateKey(key);
 
