@@ -191,6 +191,7 @@ export class ProxyController {
           const dataResponse = await this.getProxy(key);
 
           const proxyArray = dataResponse?.proxy.split(':');
+          // proxyArray = [ip, port, user, pass]
 
           console.log(dataResponse);
 
@@ -200,9 +201,11 @@ export class ProxyController {
 
           const dataJson = {
             realIpAddress: proxyArray[0],
-            http: proxyArray[0],
+            http: dataResponse.proxy, // Full proxy string: ip:port:user:pass
             httpPort: proxyArray[1],
             host: proxyArray[0],
+            user: proxyArray[2] || dataResponse.user,
+            pass: proxyArray[3] || dataResponse.pass,
             setAt, // Lưu timestamp set vào Redis
             expiresAt, // Lưu timestamp hết hạn
             timeRemaining: 60, // Thời gian ban đầu
@@ -385,6 +388,7 @@ export class ProxyController {
           const dataResponse = await this.getProxy(key);
 
           const proxyArray = dataResponse?.proxy.split(':');
+          // proxyArray = [ip, port, user, pass]
 
           const now = Math.floor(Date.now() / 1000);
           const setAt = now;
@@ -392,9 +396,11 @@ export class ProxyController {
 
           const dataJson = {
             realIpAddress: proxyArray[0],
-            http: proxyArray[0],
+            http: dataResponse.proxy, // Full proxy string: ip:port:user:pass
             httpPort: proxyArray[1],
             host: proxyArray[0],
+            user: proxyArray[2] || dataResponse.user,
+            pass: proxyArray[3] || dataResponse.pass,
             setAt,
             expiresAt,
           };
