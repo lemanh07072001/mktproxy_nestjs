@@ -62,8 +62,8 @@ import config from './config/config';
             socket: {
               host: redis.host,
               port: redis.port,
-              password: redis.pass,
             },
+            password: redis.pass,
           }),
           ttl: redis.ttl,
         };
