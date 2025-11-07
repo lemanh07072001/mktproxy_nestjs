@@ -234,18 +234,25 @@ export class ProxyController {
       }
     } catch (error: unknown) {
       if (error instanceof Error) {
-        console.error('❌ Message:', error.message);
+        console.error('❌ getApiKeyDetails Error:', error.message);
+        console.error('❌ Stack:', error.stack);
+        return {
+          success: false,
+          code: 50000001,
+          status: 'FAIL',
+          message: error.message,
+          error: error.name || 'EXCEPTION',
+        };
       } else {
         console.error('❌ Unknown error:', error);
+        return {
+          success: false,
+          code: 50000001,
+          status: 'FAIL',
+          message: 'Internal Server Error',
+          error: 'EXCEPTION',
+        };
       }
-
-      return {
-        success: false,
-        code: 50000001,
-        status: 'FAIL',
-        message: 'Internal Server Error',
-        error: 'EXCEPTION',
-      };
     }
   }
 

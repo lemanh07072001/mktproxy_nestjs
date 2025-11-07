@@ -54,6 +54,7 @@ import config from './config/config';
         const redis = configService.get('redis') as {
           host: string;
           port: number;
+          pass: number;
           ttl: number;
         };
         return {
