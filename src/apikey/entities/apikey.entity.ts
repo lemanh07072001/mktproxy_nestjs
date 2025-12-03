@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { TypeService } from '../../type_services/entities/type_service.entity';
+import { Order } from '../../order/entities/order.entity';
 
 @Entity({ name: 'api_keys' }) // ⚠ map đúng tên bảng
 export class Apikey {
@@ -117,4 +118,9 @@ export class Apikey {
   @ManyToOne(() => TypeService, { createForeignKeyConstraints: false })
   @JoinColumn({ name: 'plan_id' })
   service_type?: TypeService;
+
+  // ✅ Liên kết với Order
+  @ManyToOne(() => Order, { createForeignKeyConstraints: false })
+  @JoinColumn({ name: 'order_id' })
+  order?: Order;
 }

@@ -19,7 +19,7 @@ export class ApikeyService {
   async getApiKeyDetails(api_key: string) {
     return this.apiKeyRepository.findOne({
       where: { api_key },
-      relations: ['service_type.partner'],
+      relations: ['service_type.partner', 'order'],
     });
   }
 

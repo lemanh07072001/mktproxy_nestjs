@@ -80,6 +80,7 @@ export class ProxyController {
   async getApiKeyDetails(@Query('key') key: string) {
     try {
       const api_key = await this.apikeyService.getApiKeyDetails(key);
+
       this.ensureApiKeyUsable(api_key);
 
       switch (api_key.service_type.partner?.partner_code) {
@@ -122,6 +123,14 @@ export class ProxyController {
               success: true,
               code: 200,
               status: 'SUCCESS',
+            };
+          }else if(dataResponse?.status === 103){
+            return {
+              success: false,
+              code: 40400006,
+              message: 'Lỗi kết nối đến máy chủ',
+              status: 'FAIL',
+              error: 'ERROR_PROXY',
             };
           }
 
@@ -193,7 +202,6 @@ export class ProxyController {
           const proxyArray = dataResponse?.proxy.split(':');
           // proxyArray = [ip, port, user, pass]
 
-          console.log(dataResponse);
 
           const now = Math.floor(Date.now() / 1000);
           const setAt = now; // Timestamp khi set vào Redis
@@ -552,7 +560,6 @@ export class ProxyController {
     try {
       const { quantity = 1, time = 30 } = body;
 
-      console.log('📦 Buy-key request:', { body, quantity, time });
 
       const result = await this.proxyService.buyKeys(quantity, time);
 
@@ -578,7 +585,6 @@ export class ProxyController {
     try {
       const { quantity = 1, time = 30 } = body;
 
-      console.log('📦 Buy-key-test request:', { body, quantity, time });
 
       const result = await this.proxyService.buyKeys(quantity, time);
 
@@ -601,7 +607,7 @@ export class ProxyController {
   @Public()
   async getAllProxies() {
     const proxies = await this.proxyService.getAllProxies();
-    console.log('dsa');
+
 
     return {
       success: true,

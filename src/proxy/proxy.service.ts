@@ -136,7 +136,6 @@ export class ProxyService {
 
     this.logger.log(`🔄 Xoay proxy cho key ${key} -> ${proxyStr}`);
 
-    console.log(proxy);
     return { proxy, reused: false };
   }
 
