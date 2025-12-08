@@ -65,6 +65,7 @@ import config from './config/config';
               port: redis.port,
             },
             password: redis.password,
+            database: redis.db,
           }),
           ttl: redis.ttl,
         };
