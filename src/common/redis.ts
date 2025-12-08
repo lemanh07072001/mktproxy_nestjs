@@ -11,7 +11,7 @@ export function getRedisClient(): Redis {
       : new Redis({
           host: process.env.REDIS_HOST || '127.0.0.1',
           port: Number(process.env.REDIS_PORT || 6379),
-          password: process.env.REDIS_PASSWORD || undefined,
+          password: process.env.REDIS_PASSWORD || '432423@fsdfAs',
           db: Number(process.env.REDIS_DB || 0),
         });
 
@@ -34,7 +34,11 @@ export async function redisGet<T = any>(key: string): Promise<T | null> {
   }
 }
 
-export async function redisSet(key: string, value: any, ttlSeconds?: number): Promise<void> {
+export async function redisSet(
+  key: string,
+  value: any,
+  ttlSeconds?: number,
+): Promise<void> {
   const client = getRedisClient();
   const payload = JSON.stringify(value);
   if (ttlSeconds && ttlSeconds > 0) {
@@ -48,4 +52,3 @@ export async function redisDel(key: string): Promise<void> {
   const client = getRedisClient();
   await client.del(key);
 }
-
