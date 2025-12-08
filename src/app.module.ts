@@ -67,7 +67,7 @@ import { AppService } from './app.service';
               host: redis.host,
               port: redis.port,
             },
-            password: redis.password,
+            password: redis.password || undefined,
             database: redis.db,
           }),
           ttl: redis.ttl,
