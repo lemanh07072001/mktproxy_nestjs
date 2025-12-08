@@ -13,6 +13,7 @@ import { AuthModule } from './auth/auth.module';
 import { OrderModule } from './order/order.module';
 
 import config from './config/config';
+import { AppController } from './app.controller';
 
 @Module({
   imports: [
@@ -81,7 +82,7 @@ import config from './config/config';
     AuthModule,
     OrderModule,
   ],
-  controllers: [],
+  controllers: [AppController],
   providers: [],
 })
 export class AppModule {}
