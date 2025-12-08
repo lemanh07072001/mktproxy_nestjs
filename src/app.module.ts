@@ -57,6 +57,7 @@ import config from './config/config';
           port: number;
           password: string;
           ttl: number;
+          db: number;
         };
         return {
           store: await redisStore({
