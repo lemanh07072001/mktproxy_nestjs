@@ -14,6 +14,7 @@ import { OrderModule } from './order/order.module';
 
 import config from './config/config';
 import { AppController } from './app.controller';
+import { AppService } from './app.service';
 
 @Module({
   imports: [
@@ -83,6 +84,6 @@ import { AppController } from './app.controller';
     OrderModule,
   ],
   controllers: [AppController],
-  providers: [],
+  providers: [AppService],
 })
 export class AppModule {}
