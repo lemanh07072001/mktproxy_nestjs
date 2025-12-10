@@ -228,7 +228,7 @@ export class ProxyController {
           const token = api_key.service_type.partner?.token_api;
           const id_proxy_partner =
             api_key?.parent_api_mapping?.id_proxy_partner;
-          const urlGetOrderProxyPartner = `${GetProxyUrl['homeproxy.vn']}/merchant/proxies/${id_proxy_partner}/rotate`;
+          const urlGetOrderProxyPartner = `${GetProxyUrl['homeproxy.vn']}/merchant/proxies?filter=id%3A%24eq%3Astring%3A${id_proxy_partner}`;
 
           try {
             const response = await instance.get<any>(urlGetOrderProxyPartner, {
@@ -237,24 +237,34 @@ export class ProxyController {
                 Accept: 'application/json',
               },
             });
-
             const dataResponse = response.data;
 
-            // Nếu status = success, lưu proxy vào cache và trả về
-            if (dataResponse?.status === 'success') {
-              const proxyArray = dataResponse?.proxy?.split(':') || [];
+            // Kiểm tra có data và data[0] không
+            if (dataResponse?.data && dataResponse.data.length > 0) {
+              const proxyData = dataResponse.data[0];
+              const proxyInfo = proxyData.proxy;
+
               const now = Math.floor(Date.now() / 1000);
-              const actualTimeRemaining =
-                Number(dataResponse?.timeRemaining) || 60;
+              // rotateInterval từ API là số phút (VD: 1 = 1 phút)
+              const rotateIntervalMinutes = Number(proxyInfo?.rotateInterval) || 1;
+              // Chuyển từ phút sang giây để sử dụng trong Redis TTL và response
+              const actualTimeRemaining = rotateIntervalMinutes * 60;
               const expiresAt = now + actualTimeRemaining;
 
+              // Tạo proxy string: ip:port:user:pass
+              const ip = proxyInfo?.ipaddress?.ip || '';
+              const port = proxyInfo?.port || '';
+              const username = proxyInfo?.username || '';
+              const password = proxyInfo?.password || '';
+              const proxyString = `${ip}:${port}:${username}:${password}`;
+
               const dataJson = {
-                realIpAddress: dataResponse?.ip,
-                [this.protocolKey(api_key?.protocol)]: dataResponse?.proxy,
-                [`${this.protocolKey(api_key?.protocol)}Port`]: proxyArray[1],
-                host: proxyArray[0],
-                user: proxyArray[2],
-                pass: proxyArray[3],
+                realIpAddress: ip,
+                [this.protocolKey(api_key?.protocol)]: proxyString,
+                [`${this.protocolKey(api_key?.protocol)}Port`]: port,
+                host: ip,
+                user: username,
+                pass: password,
                 setAt: now,
                 expiresAt,
                 timeRemaining: actualTimeRemaining,
@@ -283,7 +293,7 @@ export class ProxyController {
               success: false,
               code: 50000001,
               status: 'FAIL',
-              message: dataResponse?.message || 'Lỗi từ homeproxy.vn',
+              message: 'Không tìm thấy proxy từ homeproxy.vn',
               error: 'ERROR_PROXY',
             };
           } catch (axiosError: any) {
@@ -494,63 +504,94 @@ export class ProxyController {
         }
 
         case 'homeproxy.vn': {
+          // Không có cache, gọi API để lấy proxy
           const token = api_key.service_type.partner?.token_api;
           const id_proxy_partner =
             api_key?.parent_api_mapping?.id_proxy_partner;
-          const urlGetOrderProxyPartner = `${GetProxyUrl['homeproxy.vn']}/merchant/proxies/${id_proxy_partner}/rotate`;
+          const urlGetOrderProxyPartner = `${GetProxyUrl['homeproxy.vn']}/merchant/proxies?filter=id%3A%24eq%3Astring%3A${id_proxy_partner}`;
 
-          const response = await instance.get<any>(urlGetOrderProxyPartner, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              Accept: 'application/json',
-            },
-          });
-
-          const dataResponse = response.data;
-          if (dataResponse?.status === 'success') {
-            const proxyArray = dataResponse?.proxy.split(':');
-            const now = Math.floor(Date.now() / 1000);
-            const actualTimeRemaining =
-              Number(dataResponse?.timeRemaining) || 60;
-            const expiresAt = now + actualTimeRemaining;
-
-            const dataJson = {
-              realIpAddress: dataResponse?.ip,
-              [this.protocolKey(api_key?.protocol)]: dataResponse?.proxy,
-              [`${this.protocolKey(api_key?.protocol)}Port`]: proxyArray[1],
-              host: proxyArray[0],
-              user: proxyArray[2],
-              pass: proxyArray[3],
-              setAt: now,
-              expiresAt,
-              timeRemaining: actualTimeRemaining,
-            };
-
-            await redisSet(PROXY_XOAY(key), dataJson, actualTimeRemaining);
-
-            const {
-              setAt: _,
-              expiresAt: __,
-              ...dataWithoutTimestamps
-            } = dataJson;
-            return {
-              data: {
-                ...dataWithoutTimestamps,
-                timeRemaining: actualTimeRemaining,
-                message: `Proxy mới, có thể xoay sau ${actualTimeRemaining}s`,
+          try {
+            const response = await instance.get<any>(urlGetOrderProxyPartner, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: 'application/json',
               },
-              success: true,
-              code: 200,
-              status: 'SUCCESS',
+            });
+            const dataResponse = response.data;
+
+            // Kiểm tra có data và data[0] không
+            if (dataResponse?.data && dataResponse.data.length > 0) {
+              const proxyData = dataResponse.data[0];
+              const proxyInfo = proxyData.proxy;
+
+              const now = Math.floor(Date.now() / 1000);
+              // rotateInterval từ API là số phút (VD: 1 = 1 phút)
+              const rotateIntervalMinutes =
+                Number(proxyInfo?.rotateInterval) || 1;
+              // Chuyển từ phút sang giây để sử dụng trong Redis TTL và response
+              const actualTimeRemaining = rotateIntervalMinutes * 60;
+              const expiresAt = now + actualTimeRemaining;
+
+              // Tạo proxy string: ip:port:user:pass
+              const ip = proxyInfo?.ipaddress?.ip || '';
+              const port = proxyInfo?.port || '';
+              const username = proxyInfo?.username || '';
+              const password = proxyInfo?.password || '';
+              const proxyString = `${ip}:${port}:${username}:${password}`;
+
+              const dataJson = {
+                realIpAddress: ip,
+                [this.protocolKey(api_key?.protocol)]: proxyString,
+                [`${this.protocolKey(api_key?.protocol)}Port`]: port,
+                host: ip,
+                user: username,
+                pass: password,
+                setAt: now,
+                expiresAt,
+                timeRemaining: actualTimeRemaining,
+              };
+
+              await redisSet(PROXY_XOAY(key), dataJson, actualTimeRemaining);
+
+              const {
+                setAt: _,
+                expiresAt: __,
+                ...dataWithoutTimestamps
+              } = dataJson;
+              return {
+                data: {
+                  ...dataWithoutTimestamps,
+                  timeRemaining: actualTimeRemaining,
+                  message: `Proxy hiện tại, có thể xoay sau ${actualTimeRemaining}s`,
+                },
+                success: true,
+                code: 200,
+                status: 'SUCCESS',
+              };
+            }
+
+            return {
+              success: false,
+              code: 50000001,
+              status: 'FAIL',
+              message: 'Không tìm thấy proxy từ homeproxy.vn',
+              error: 'ERROR_PROXY',
+            };
+          } catch (axiosError: any) {
+            console.error('❌ [/current] homeproxy.vn error:', {
+              status: axiosError?.response?.status,
+              data: axiosError?.response?.data?.message,
+            });
+
+            return {
+              success: false,
+              code: 50000001,
+              status: 'FAIL',
+              message:
+                axiosError?.response?.data?.message || 'Lỗi từ homeproxy.vn',
+              error: 'ERROR_PROXY',
             };
           }
-
-          return {
-            success: false,
-            code: 50000001,
-            status: 'FAIL',
-            error: 'ERROR_PROXY',
-          };
         }
 
         case 'mktproxy.com': {
