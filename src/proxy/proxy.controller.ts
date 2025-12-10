@@ -85,6 +85,17 @@ export class ProxyController {
 
       switch (api_key.service_type.partner?.partner_code) {
         case 'proxy.vn': {
+          // Kiểm tra cache trước
+          const cachedProxy = await redisGet(PROXY_XOAY(key));
+          if (cachedProxy) {
+            return {
+              data: cachedProxy,
+              success: true,
+              code: 200,
+              status: 'SUCCESS',
+            };
+          }
+
           const response = await instance.get<ProxyVNResponse>(
             GetProxyUrl['proxy.vn'],
             {
@@ -124,7 +135,7 @@ export class ProxyController {
               code: 200,
               status: 'SUCCESS',
             };
-          }else if(dataResponse?.status === 103){
+          } else if (dataResponse?.status === 103) {
             return {
               success: false,
               code: 40400006,
@@ -145,84 +156,131 @@ export class ProxyController {
             status: 'FAIL',
             error: 'ERROR_PROXY',
           };
-
-          break;
         }
 
         case 'homeproxy.vn': {
-          const token = api_key.service_type.partner?.token_api;
-          const id_proxy_partner =
-            api_key?.parent_api_mapping?.id_proxy_partner;
-          const urlGetOrderProxyPartner = `${GetProxyUrl['homeproxy.vn']}/merchant/proxies/${id_proxy_partner}/rotate`;
-
-          const response = await instance.get<any>(urlGetOrderProxyPartner, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              Accept: 'application/json',
-            },
-          });
-
-          const dataResponse = response.data;
-          if (dataResponse?.status === 'success') {
-            const proxyArray = dataResponse?.proxy.split(':');
-            const dataJson = {
-              realIpAddress: dataResponse?.ip,
-              [this.protocolKey(api_key?.protocol)]: dataResponse?.proxy,
-              [`${this.protocolKey(api_key?.protocol)}Port`]: proxyArray[1],
-              host: proxyArray[0],
-              // message: 'Proxy can be changed again in ' + dataResponse?.timeRemaining + ' seconds.',
-              // timeRemaining: dataResponse?.timeRemaining,
-            };
-
-            const ttl = Math.max(
-              1,
-              Number(dataResponse?.timeRemaining ?? 60) - 2,
-            );
-            await redisSet(PROXY_XOAY(key), dataJson, ttl);
-
+          // Kiểm tra cache trước
+          const cachedProxy = await redisGet(PROXY_XOAY(key));
+          if (cachedProxy) {
             return {
-              data: dataJson,
+              data: cachedProxy,
               success: true,
               code: 200,
               status: 'SUCCESS',
             };
           }
 
-          return {
-            success: false,
-            code: 50000001,
-            status: 'FAIL',
-            error: 'ERROR_PROXY',
-          };
+          const token = api_key.service_type.partner?.token_api;
+          const id_proxy_partner =
+            api_key?.parent_api_mapping?.id_proxy_partner;
+          const urlGetOrderProxyPartner = `${GetProxyUrl['homeproxy.vn']}/merchant/proxies/${id_proxy_partner}/rotate`;
+
+          try {
+            const response = await instance.get<any>(urlGetOrderProxyPartner, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: 'application/json',
+              },
+            });
+
+            const dataResponse = response.data;
+
+            // Nếu status = success, lưu proxy vào cache và trả về
+            if (dataResponse?.status === 'success') {
+              const proxyArray = dataResponse?.proxy?.split(':') || [];
+              const dataJson = {
+                realIpAddress: dataResponse?.ip,
+                [this.protocolKey(api_key?.protocol)]: dataResponse?.proxy,
+                [`${this.protocolKey(api_key?.protocol)}Port`]: proxyArray[1],
+                host: proxyArray[0],
+                user: proxyArray[2],
+                pass: proxyArray[3],
+                timeRemaining: dataResponse?.timeRemaining,
+              };
+
+              const ttl = Math.max(
+                1,
+                Number(dataResponse?.timeRemaining ?? 60) - 2,
+              );
+              await redisSet(PROXY_XOAY(key), dataJson, ttl);
+
+              return {
+                data: dataJson,
+                success: true,
+                code: 200,
+                status: 'SUCCESS',
+              };
+            }
+
+            return {
+              success: false,
+              code: 50000001,
+              status: 'FAIL',
+              message: dataResponse?.message || 'Lỗi từ homeproxy.vn',
+              error: 'ERROR_PROXY',
+            };
+          } catch (axiosError: any) {
+            const errData = axiosError?.response?.data;
+            console.error('❌ [/new] homeproxy.vn error:', {
+              status: axiosError?.response?.status,
+              data: errData,
+            });
+
+            return {
+              success: false,
+              code: 50000001,
+              status: 'FAIL',
+              message: errData?.message || axiosError.message,
+              error: 'ERROR_PROXY',
+            };
+          }
         }
 
         case 'mktproxy.com': {
+          // Kiểm tra cache trước
+          const cachedProxy = await redisGet(PROXY_XOAY(key));
+          if (cachedProxy) {
+            // Tính timeRemaining từ expiresAt
+            const now = Math.floor(Date.now() / 1000);
+            const timeRemaining = cachedProxy.expiresAt
+              ? Math.max(0, cachedProxy.expiresAt - now)
+              : 0;
+
+            const { setAt, expiresAt, ...dataWithoutTimestamps } = cachedProxy;
+            return {
+              data: {
+                ...dataWithoutTimestamps,
+                timeRemaining,
+              },
+              success: true,
+              code: 200,
+              status: 'SUCCESS',
+            };
+          }
+
           const dataResponse = await this.getProxy(key);
 
           const proxyArray = dataResponse?.proxy.split(':');
           // proxyArray = [ip, port, user, pass]
 
-
           const now = Math.floor(Date.now() / 1000);
-          const setAt = now; // Timestamp khi set vào Redis
-          const expiresAt = now + 60; // Timestamp khi hết hạn
+          const setAt = now;
+          const expiresAt = now + 60;
 
           const dataJson = {
             realIpAddress: proxyArray[0],
-            http: dataResponse.proxy, // Full proxy string: ip:port:user:pass
+            http: dataResponse.proxy,
             httpPort: proxyArray[1],
             host: proxyArray[0],
             user: proxyArray[2] || dataResponse.user,
             pass: proxyArray[3] || dataResponse.pass,
-            setAt, // Lưu timestamp set vào Redis
-            expiresAt, // Lưu timestamp hết hạn
-            timeRemaining: 60, // Thời gian ban đầu
+            setAt,
+            expiresAt,
+            timeRemaining: 60,
           };
 
-          // Set TTL = 60s
           await redisSet(PROXY_XOAY(key), dataJson, 60);
 
-          // Bỏ setAt và expiresAt khỏi response
           const {
             setAt: _,
             expiresAt: __,
@@ -232,7 +290,7 @@ export class ProxyController {
           return {
             data: {
               ...dataWithoutTimestamps,
-              timeRemaining: dataResponse.timeRemaining, // Trả về thời gian thực tế
+              timeRemaining: dataResponse.timeRemaining,
             },
             success: true,
             code: 200,

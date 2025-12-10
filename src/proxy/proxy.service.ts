@@ -45,6 +45,25 @@ export class ProxyService {
 
   // Validate key trước khi sử dụng
   async validateKey(key: string) {
+    // Tìm trong bảng ProxyKey (MongoDB) trước
+    const proxyKey = await this.proxyKeyModel.findOne({ key }).lean();
+
+    if (proxyKey) {
+      // Kiểm tra active
+      if (!proxyKey.active) {
+        throw new BadRequestException('Key đã bị vô hiệu hóa');
+      }
+
+      // Kiểm tra hết hạn (expired_at là Unix timestamp)
+      const now = Math.floor(Date.now() / 1000);
+      if (proxyKey.expired_at && proxyKey.expired_at < now) {
+        throw new BadRequestException('Key đã hết hạn');
+      }
+
+      return proxyKey;
+    }
+
+    // Fallback: tìm trong bảng Apikey (SQL) nếu không có trong ProxyKey
     const apiKey = await this.apikeyService.getApiKeyDetails(key);
 
     if (!apiKey) {

@@ -35,7 +35,7 @@ import { AppService } from './app.service';
         database: configService.get<string>('mysql.database'),
         autoLoadEntities: true,
         synchronize: false,
-        logging: true,
+        logging: false,
       }),
     }),
 
