@@ -260,7 +260,18 @@ export class ProxyController {
 
           const dataResponse = await this.getProxy(key);
 
-          const proxyArray = dataResponse?.proxy.split(':');
+          // Kiểm tra nếu không có proxy
+          if (!dataResponse?.success || !dataResponse?.proxy) {
+            return {
+              success: false,
+              code: 50000001,
+              status: 'FAIL',
+              message: dataResponse?.message || 'Không còn proxy khả dụng',
+              error: 'NO_PROXY_AVAILABLE',
+            };
+          }
+
+          const proxyArray = dataResponse.proxy.split(':');
           // proxyArray = [ip, port, user, pass]
 
           const now = Math.floor(Date.now() / 1000);
@@ -460,7 +471,18 @@ export class ProxyController {
           // Nếu không có cache, lấy proxy mới
           const dataResponse = await this.getProxy(key);
 
-          const proxyArray = dataResponse?.proxy.split(':');
+          // Kiểm tra nếu không có proxy
+          if (!dataResponse?.success || !dataResponse?.proxy) {
+            return {
+              success: false,
+              code: 50000001,
+              status: 'FAIL',
+              message: dataResponse?.message || 'Không còn proxy khả dụng',
+              error: 'NO_PROXY_AVAILABLE',
+            };
+          }
+
+          const proxyArray = dataResponse.proxy.split(':');
           // proxyArray = [ip, port, user, pass]
 
           const now = Math.floor(Date.now() / 1000);
@@ -618,7 +640,6 @@ export class ProxyController {
     try {
       const { quantity = 1, time = 30 } = body;
 
-
       const result = await this.proxyService.buyKeys(quantity, time);
 
       return {
@@ -643,7 +664,6 @@ export class ProxyController {
     try {
       const { quantity = 1, time = 30 } = body;
 
-
       const result = await this.proxyService.buyKeys(quantity, time);
 
       return {
@@ -665,7 +685,6 @@ export class ProxyController {
   @Public()
   async getAllProxies() {
     const proxies = await this.proxyService.getAllProxies();
-
 
     return {
       success: true,
