@@ -95,6 +95,15 @@ export class ProxyController {
               : 0;
 
             const { setAt, expiresAt, ...dataWithoutTimestamps } = cachedProxy;
+
+            // Loại bỏ :: ở cuối http và socks5 nếu có
+            if (dataWithoutTimestamps.http) {
+              dataWithoutTimestamps.http = dataWithoutTimestamps.http.replace(/:+$/, '');
+            }
+            if (dataWithoutTimestamps.socks5) {
+              dataWithoutTimestamps.socks5 = dataWithoutTimestamps.socks5.replace(/:+$/, '');
+            }
+
             return {
               data: {
                 ...dataWithoutTimestamps,
@@ -151,11 +160,7 @@ export class ProxyController {
             };
             await redisSet(PROXY_XOAY(key), dataJson, actualTimeRemaining);
 
-            const {
-              setAt: _,
-              expiresAt: __,
-              ...dataWithoutTimestamps
-            } = dataJson;
+            const { setAt: _, expiresAt: __, ...dataWithoutTimestamps } = dataJson;
             return {
               data: {
                 ...dataWithoutTimestamps,
