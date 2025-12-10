@@ -290,14 +290,15 @@ export class ProxyController {
             const errData = axiosError?.response?.data;
             console.error('❌ [/new] homeproxy.vn error:', {
               status: axiosError?.response?.status,
-              data: errData,
+              data: axiosError?.response?.data?.message,
             });
 
             return {
               success: false,
               code: 50000001,
               status: 'FAIL',
-              message: errData?.message || axiosError.message,
+              message:
+                axiosError?.response?.data?.message || axiosError.message,
               error: 'ERROR_PROXY',
             };
           }
