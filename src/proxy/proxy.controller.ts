@@ -151,7 +151,11 @@ export class ProxyController {
             };
             await redisSet(PROXY_XOAY(key), dataJson, actualTimeRemaining);
 
-            const { setAt: _, expiresAt: __, ...dataWithoutTimestamps } = dataJson;
+            const {
+              setAt: _,
+              expiresAt: __,
+              ...dataWithoutTimestamps
+            } = dataJson;
             return {
               data: {
                 ...dataWithoutTimestamps,
@@ -227,7 +231,8 @@ export class ProxyController {
             if (dataResponse?.status === 'success') {
               const proxyArray = dataResponse?.proxy?.split(':') || [];
               const now = Math.floor(Date.now() / 1000);
-              const actualTimeRemaining = Number(dataResponse?.timeRemaining) || 60;
+              const actualTimeRemaining =
+                Number(dataResponse?.timeRemaining) || 60;
               const expiresAt = now + actualTimeRemaining;
 
               const dataJson = {
@@ -244,7 +249,11 @@ export class ProxyController {
 
               await redisSet(PROXY_XOAY(key), dataJson, actualTimeRemaining);
 
-              const { setAt: _, expiresAt: __, ...dataWithoutTimestamps } = dataJson;
+              const {
+                setAt: _,
+                expiresAt: __,
+                ...dataWithoutTimestamps
+              } = dataJson;
               return {
                 data: {
                   ...dataWithoutTimestamps,
@@ -298,6 +307,7 @@ export class ProxyController {
                 timeRemaining,
                 message: `Proxy hiện tại, có thể xoay sau ${timeRemaining}s`,
               },
+
               success: true,
               code: 200,
               status: 'SUCCESS',
@@ -463,7 +473,8 @@ export class ProxyController {
           if (dataResponse?.status === 'success') {
             const proxyArray = dataResponse?.proxy.split(':');
             const now = Math.floor(Date.now() / 1000);
-            const actualTimeRemaining = Number(dataResponse?.timeRemaining) || 60;
+            const actualTimeRemaining =
+              Number(dataResponse?.timeRemaining) || 60;
             const expiresAt = now + actualTimeRemaining;
 
             const dataJson = {
@@ -480,7 +491,11 @@ export class ProxyController {
 
             await redisSet(PROXY_XOAY(key), dataJson, actualTimeRemaining);
 
-            const { setAt: _, expiresAt: __, ...dataWithoutTimestamps } = dataJson;
+            const {
+              setAt: _,
+              expiresAt: __,
+              ...dataWithoutTimestamps
+            } = dataJson;
             return {
               data: {
                 ...dataWithoutTimestamps,
