@@ -154,7 +154,7 @@ export class ProxyService {
 
     this.logger.log(`🔄 Xoay proxy cho key ${key} -> ${proxyStr}`);
 
-    return { proxy, reused: false };
+    return { proxy, reused: false, timeRemaining: this.ROTATE_SECONDS };
   }
 
   async getAllProxies() {

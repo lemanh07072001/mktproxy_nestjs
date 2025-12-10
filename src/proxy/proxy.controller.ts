@@ -88,8 +88,19 @@ export class ProxyController {
           // Kiểm tra cache trước
           const cachedProxy = await redisGet(PROXY_XOAY(key));
           if (cachedProxy) {
+            // Tính timeRemaining từ expiresAt
+            const now = Math.floor(Date.now() / 1000);
+            const timeRemaining = cachedProxy.expiresAt
+              ? Math.max(0, cachedProxy.expiresAt - now)
+              : 0;
+
+            const { setAt, expiresAt, ...dataWithoutTimestamps } = cachedProxy;
             return {
-              data: cachedProxy,
+              data: {
+                ...dataWithoutTimestamps,
+                timeRemaining,
+                message: `Proxy hiện tại, có thể xoay sau ${timeRemaining}s`,
+              },
               success: true,
               code: 200,
               status: 'SUCCESS',
@@ -108,8 +119,12 @@ export class ProxyController {
           const dataResponse = response.data;
 
           if (dataResponse?.status === 100) {
-            const proxyHttp = dataResponse?.proxyhttp || '';
-            const proxySocks5 = dataResponse?.proxysocks5 || '';
+            const proxyHttpRaw = dataResponse?.proxyhttp || '';
+            const proxySocks5Raw = dataResponse?.proxysocks5 || '';
+
+            // Loại bỏ :: ở cuối nếu không có user/pass
+            const proxyHttp = proxyHttpRaw.replace(/:+$/, '');
+            const proxySocks5 = proxySocks5Raw.replace(/:+$/, '');
 
             await this.apikeyService.updateProxys(key, {
               http: proxyHttp,
@@ -119,6 +134,10 @@ export class ProxyController {
             const [httpHost = '', httpPort = ''] = proxyHttp.split(':');
             const [, socks5Port = ''] = proxySocks5.split(':');
 
+            const now = Math.floor(Date.now() / 1000);
+            const actualTimeRemaining = 60;
+            const expiresAt = now + actualTimeRemaining;
+
             const dataJson = {
               realIpAddress: httpHost,
               http: proxyHttp,
@@ -126,11 +145,19 @@ export class ProxyController {
               httpPort,
               socks5Port,
               host: httpHost,
+              setAt: now,
+              expiresAt,
+              timeRemaining: actualTimeRemaining,
             };
-            await redisSet(PROXY_XOAY(key), dataJson, 60);
+            await redisSet(PROXY_XOAY(key), dataJson, actualTimeRemaining);
 
+            const { setAt: _, expiresAt: __, ...dataWithoutTimestamps } = dataJson;
             return {
-              data: dataJson,
+              data: {
+                ...dataWithoutTimestamps,
+                timeRemaining: actualTimeRemaining,
+                message: `Proxy mới, có thể xoay sau ${actualTimeRemaining}s`,
+              },
               success: true,
               code: 200,
               status: 'SUCCESS',
@@ -162,8 +189,19 @@ export class ProxyController {
           // Kiểm tra cache trước
           const cachedProxy = await redisGet(PROXY_XOAY(key));
           if (cachedProxy) {
+            // Tính timeRemaining từ expiresAt
+            const now = Math.floor(Date.now() / 1000);
+            const timeRemaining = cachedProxy.expiresAt
+              ? Math.max(0, cachedProxy.expiresAt - now)
+              : 0;
+
+            const { setAt, expiresAt, ...dataWithoutTimestamps } = cachedProxy;
             return {
-              data: cachedProxy,
+              data: {
+                ...dataWithoutTimestamps,
+                timeRemaining,
+                message: `Proxy hiện tại, có thể xoay sau ${timeRemaining}s`,
+              },
               success: true,
               code: 200,
               status: 'SUCCESS',
@@ -184,10 +222,14 @@ export class ProxyController {
             });
 
             const dataResponse = response.data;
-
+            console.log(dataResponse);
             // Nếu status = success, lưu proxy vào cache và trả về
             if (dataResponse?.status === 'success') {
               const proxyArray = dataResponse?.proxy?.split(':') || [];
+              const now = Math.floor(Date.now() / 1000);
+              const actualTimeRemaining = Number(dataResponse?.timeRemaining) || 60;
+              const expiresAt = now + actualTimeRemaining;
+
               const dataJson = {
                 realIpAddress: dataResponse?.ip,
                 [this.protocolKey(api_key?.protocol)]: dataResponse?.proxy,
@@ -195,17 +237,20 @@ export class ProxyController {
                 host: proxyArray[0],
                 user: proxyArray[2],
                 pass: proxyArray[3],
-                timeRemaining: dataResponse?.timeRemaining,
+                setAt: now,
+                expiresAt,
+                timeRemaining: actualTimeRemaining,
               };
 
-              const ttl = Math.max(
-                1,
-                Number(dataResponse?.timeRemaining ?? 60) - 2,
-              );
-              await redisSet(PROXY_XOAY(key), dataJson, ttl);
+              await redisSet(PROXY_XOAY(key), dataJson, actualTimeRemaining);
 
+              const { setAt: _, expiresAt: __, ...dataWithoutTimestamps } = dataJson;
               return {
-                data: dataJson,
+                data: {
+                  ...dataWithoutTimestamps,
+                  timeRemaining: actualTimeRemaining,
+                  message: `Proxy mới, có thể xoay sau ${actualTimeRemaining}s`,
+                },
                 success: true,
                 code: 200,
                 status: 'SUCCESS',
@@ -251,6 +296,7 @@ export class ProxyController {
               data: {
                 ...dataWithoutTimestamps,
                 timeRemaining,
+                message: `Proxy hiện tại, có thể xoay sau ${timeRemaining}s`,
               },
               success: true,
               code: 200,
@@ -276,7 +322,8 @@ export class ProxyController {
 
           const now = Math.floor(Date.now() / 1000);
           const setAt = now;
-          const expiresAt = now + 60;
+          const actualTimeRemaining = dataResponse.timeRemaining || 60;
+          const expiresAt = now + actualTimeRemaining;
 
           const dataJson = {
             realIpAddress: proxyArray[0],
@@ -287,10 +334,10 @@ export class ProxyController {
             pass: proxyArray[3] || dataResponse.pass,
             setAt,
             expiresAt,
-            timeRemaining: 60,
+            timeRemaining: actualTimeRemaining,
           };
 
-          await redisSet(PROXY_XOAY(key), dataJson, 60);
+          await redisSet(PROXY_XOAY(key), dataJson, actualTimeRemaining);
 
           const {
             setAt: _,
@@ -301,7 +348,8 @@ export class ProxyController {
           return {
             data: {
               ...dataWithoutTimestamps,
-              timeRemaining: dataResponse.timeRemaining,
+              timeRemaining: actualTimeRemaining,
+              message: `Proxy mới, có thể xoay sau ${actualTimeRemaining}s`,
             },
             success: true,
             code: 200,
@@ -355,6 +403,7 @@ export class ProxyController {
             data: {
               ...dataWithoutTimestamps,
               timeRemaining,
+              message: `Proxy hiện tại, có thể xoay sau ${timeRemaining}s`,
             },
             success: true,
             code: 200,
@@ -413,24 +462,31 @@ export class ProxyController {
           const dataResponse = response.data;
           if (dataResponse?.status === 'success') {
             const proxyArray = dataResponse?.proxy.split(':');
+            const now = Math.floor(Date.now() / 1000);
+            const actualTimeRemaining = Number(dataResponse?.timeRemaining) || 60;
+            const expiresAt = now + actualTimeRemaining;
+
             const dataJson = {
               realIpAddress: dataResponse?.ip,
               [this.protocolKey(api_key?.protocol)]: dataResponse?.proxy,
               [`${this.protocolKey(api_key?.protocol)}Port`]: proxyArray[1],
               host: proxyArray[0],
-              // message: 'Proxy can be changed again in ' + dataResponse?.timeRemaining + ' seconds.',
-              // timeRemaining: dataResponse?.timeRemaining,
+              user: proxyArray[2],
+              pass: proxyArray[3],
+              setAt: now,
+              expiresAt,
+              timeRemaining: actualTimeRemaining,
             };
 
-            await redisSet(PROXY_XOAY(key), dataJson, 60);
-            const ttl = Math.max(
-              1,
-              Number(dataResponse?.timeRemaining ?? 60) - 2,
-            );
-            await redisSet(PROXY_XOAY(key), dataJson, ttl);
+            await redisSet(PROXY_XOAY(key), dataJson, actualTimeRemaining);
 
+            const { setAt: _, expiresAt: __, ...dataWithoutTimestamps } = dataJson;
             return {
-              data: dataJson,
+              data: {
+                ...dataWithoutTimestamps,
+                timeRemaining: actualTimeRemaining,
+                message: `Proxy mới, có thể xoay sau ${actualTimeRemaining}s`,
+              },
               success: true,
               code: 200,
               status: 'SUCCESS',
@@ -461,6 +517,7 @@ export class ProxyController {
               data: {
                 ...dataWithoutTimestamps,
                 timeRemaining,
+                message: `Proxy hiện tại, có thể xoay sau ${timeRemaining}s`,
               },
               success: true,
               code: 200,
@@ -487,7 +544,8 @@ export class ProxyController {
 
           const now = Math.floor(Date.now() / 1000);
           const setAt = now;
-          const expiresAt = now + 60;
+          const actualTimeRemaining = dataResponse.timeRemaining || 60;
+          const expiresAt = now + actualTimeRemaining;
 
           const dataJson = {
             realIpAddress: proxyArray[0],
@@ -498,9 +556,10 @@ export class ProxyController {
             pass: proxyArray[3] || dataResponse.pass,
             setAt,
             expiresAt,
+            timeRemaining: actualTimeRemaining,
           };
 
-          await redisSet(PROXY_XOAY(key), dataJson, 60);
+          await redisSet(PROXY_XOAY(key), dataJson, actualTimeRemaining);
 
           // Bỏ setAt và expiresAt khỏi response
           const {
@@ -512,7 +571,8 @@ export class ProxyController {
           return {
             data: {
               ...dataWithoutTimestamps,
-              timeRemaining: dataResponse.timeRemaining,
+              timeRemaining: actualTimeRemaining,
+              message: `Proxy mới, có thể xoay sau ${actualTimeRemaining}s`,
             },
             success: true,
             code: 200,
@@ -559,6 +619,8 @@ export class ProxyController {
         pass: data.proxy.pass,
       };
 
+      const now = Math.floor(Date.now() / 1000);
+
       if (
         data.reused &&
         'timeRemaining' in data &&
@@ -566,9 +628,11 @@ export class ProxyController {
       ) {
         response.message = `Proxy hiện tại (xoay sau ${data.timeRemaining}s)`;
         response.timeRemaining = data.timeRemaining;
+        response.nextRotateAt = now + data.timeRemaining;
       } else {
         response.message = 'Proxy mới đã được xoay';
         response.timeRemaining = 60;
+        response.nextRotateAt = now + 60;
       }
 
       return response;
