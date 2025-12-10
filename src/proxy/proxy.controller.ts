@@ -246,7 +246,8 @@ export class ProxyController {
 
               const now = Math.floor(Date.now() / 1000);
               // rotateInterval từ API là số phút (VD: 1 = 1 phút)
-              const rotateIntervalMinutes = Number(proxyInfo?.rotateInterval) || 1;
+              const rotateIntervalMinutes =
+                Number(proxyInfo?.rotateInterval) || 1;
               // Chuyển từ phút sang giây để sử dụng trong Redis TTL và response
               const actualTimeRemaining = rotateIntervalMinutes * 60;
               const expiresAt = now + actualTimeRemaining;
