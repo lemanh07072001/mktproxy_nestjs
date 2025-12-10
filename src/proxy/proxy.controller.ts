@@ -98,10 +98,14 @@ export class ProxyController {
 
             // Loại bỏ :: ở cuối http và socks5 nếu có
             if (dataWithoutTimestamps.http) {
-              dataWithoutTimestamps.http = dataWithoutTimestamps.http.replace(/:+$/, '');
+              dataWithoutTimestamps.http = dataWithoutTimestamps.http.replace(
+                /:+$/,
+                '',
+              );
             }
             if (dataWithoutTimestamps.socks5) {
-              dataWithoutTimestamps.socks5 = dataWithoutTimestamps.socks5.replace(/:+$/, '');
+              dataWithoutTimestamps.socks5 =
+                dataWithoutTimestamps.socks5.replace(/:+$/, '');
             }
 
             return {
@@ -160,7 +164,11 @@ export class ProxyController {
             };
             await redisSet(PROXY_XOAY(key), dataJson, actualTimeRemaining);
 
-            const { setAt: _, expiresAt: __, ...dataWithoutTimestamps } = dataJson;
+            const {
+              setAt: _,
+              expiresAt: __,
+              ...dataWithoutTimestamps
+            } = dataJson;
             return {
               data: {
                 ...dataWithoutTimestamps,
@@ -231,7 +239,7 @@ export class ProxyController {
             });
 
             const dataResponse = response.data;
-            console.log(dataResponse);
+
             // Nếu status = success, lưu proxy vào cache và trả về
             if (dataResponse?.status === 'success') {
               const proxyArray = dataResponse?.proxy?.split(':') || [];
@@ -441,16 +449,39 @@ export class ProxyController {
           const proxyArray =
             typeof dataProxy === 'string' ? JSON.parse(dataProxy) : dataProxy;
 
-          const proxyHttp = (proxyArray.http || '').split(':');
-          const proxySocks5 = (proxyArray.socks5 || '').split(':');
+          // Parse proxy string: ip:port:user:pass hoặc ip:port
+          const httpParts = (proxyArray.http || '').split(':');
+          const socks5Parts = (proxyArray.socks5 || '').split(':');
+
+          const httpHost = httpParts[0] || '';
+          const httpPort = httpParts[1] || '';
+          const httpUser = httpParts[2] || '';
+          const httpPass = httpParts[3] || '';
+
+          const socks5Port = socks5Parts[1] || '';
+          const socks5User = socks5Parts[2] || '';
+          const socks5Pass = socks5Parts[3] || '';
+
+          // Tạo proxy string đầy đủ hoặc chỉ ip:port nếu không có user/pass
+          const proxyHttp =
+            httpUser && httpPass
+              ? `${httpHost}:${httpPort}:${httpUser}:${httpPass}`
+              : `${httpHost}:${httpPort}`;
+          const proxySocks5 =
+            socks5User && socks5Pass
+              ? `${socks5Parts[0]}:${socks5Port}:${socks5User}:${socks5Pass}`
+              : `${socks5Parts[0]}:${socks5Port}`;
 
           const dataJson = {
-            realIpAddress: proxyHttp[0],
-            http: proxyArray.http,
-            socks5: proxyArray.socks5,
-            httpPort: proxyHttp[1],
-            socks5Port: proxySocks5[1],
-            host: proxyHttp[0],
+            realIpAddress: httpHost,
+            http: proxyHttp,
+            socks5: proxySocks5,
+            httpPort,
+            socks5Port,
+            host: httpHost,
+            user: httpUser,
+            pass: httpPass,
+            message: 'Proxy hiện tại',
           };
           return {
             data: dataJson,
@@ -458,7 +489,6 @@ export class ProxyController {
             code: 200,
             status: 'SUCCESS',
           };
-          break;
         }
 
         case 'homeproxy.vn': {
