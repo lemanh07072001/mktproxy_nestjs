@@ -297,8 +297,9 @@ export class ProxyController {
               success: false,
               code: 50000001,
               status: 'FAIL',
-              message:
-                axiosError?.response?.data?.message || axiosError.message,
+              // message:
+              //   axiosError?.response?.data?.message || axiosError.message,
+              message: errData?.message || 'Lỗi từ 0 homeproxy.vn',
               error: 'ERROR_PROXY',
             };
           }
