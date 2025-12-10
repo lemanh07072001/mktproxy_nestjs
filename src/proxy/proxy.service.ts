@@ -93,7 +93,6 @@ export class ProxyService {
       lastRotateKey(key),
       currentKey(key),
     );
-
     // Nếu chưa đến thời gian xoay và có proxy hiện tại -> trả về proxy cũ
     if (
       lastRotate &&
@@ -194,9 +193,7 @@ export class ProxyService {
           .format('YYYY-MM-DD HH:mm:ss'),
       });
 
-      this.logger.log(
-        `✅ Tạo key ${i + 1}/${quantity}: ${key}`,
-      );
+      this.logger.log(`✅ Tạo key ${i + 1}/${quantity}: ${key}`);
     }
 
     this.logger.log(
