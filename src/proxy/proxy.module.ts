@@ -6,10 +6,18 @@ import { ApikeyModule } from 'src/apikey/apikey.module';
 import { Proxy, ProxySchema } from './schemas/proxy.schema';
 import { ProxyKey, ProxyKeySchema } from './schemas/proxy-key.schema';
 import { AuthModule } from 'src/auth/auth.module';
+import { HomeproxyService } from './services/homeproxy.service';
+import { ProxyvnService } from './services/proxyvn.service';
+import { MktproxyService } from './services/mktproxy.service';
 
 @Module({
   controllers: [ProxyController],
-  providers: [ProxyService],
+  providers: [
+    ProxyService,
+    HomeproxyService,
+    ProxyvnService,
+    MktproxyService,
+  ],
   imports: [
     ApikeyModule,
     AuthModule,

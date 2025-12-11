@@ -18,17 +18,23 @@ import { AuthGuard } from 'src/guards/auth.guard';
 import { Public } from 'src/guards/public.decorator';
 import { GetProxyUrl } from './api/url.api';
 import { ProxyVNResponse } from './response.interface';
-import { PROXY_XOAY } from 'src/common/key.cache';
-import { redisGet, redisSet } from 'src/common/redis';
+import { PROXY_XOAY, ROTATE_IP_COOLDOWN } from 'src/common/key.cache';
+import { redisGet, redisSet, getRedisTTL } from 'src/common/redis';
 import { ProxyService } from './proxy.service';
+import { HomeproxyService } from './services/homeproxy.service';
+import { ProxyvnService } from './services/proxyvn.service';
+import { MktproxyService } from './services/mktproxy.service';
+import { RotateProxyRequestDto, RotateProxyResponseDto } from './dto/rotate-proxy.dto';
 
 @Controller('api/proxies')
 @UseGuards(AuthGuard)
 export class ProxyController {
   constructor(
     private readonly apikeyService: ApikeyService,
-
     private readonly proxyService: ProxyService,
+    private readonly homeproxyService: HomeproxyService,
+    private readonly proxyvnService: ProxyvnService,
+    private readonly mktproxyService: MktproxyService,
   ) {}
 
   private throwBadRequest(code: number, message: string, error: string): never {
@@ -851,5 +857,146 @@ export class ProxyController {
       total: proxies.length,
       data: proxies,
     };
+  }
+
+  /**
+   * API xoay IP proxy (hỗ trợ nhiều partner)
+   * Endpoint: POST /api/proxies/rotate
+   * Body: { api_key: string }
+   */
+  @Post('rotate')
+  @Public()
+  async rotateProxyIp(
+    @Body() body: RotateProxyRequestDto,
+  ): Promise<RotateProxyResponseDto> {
+    try {
+      const { api_key } = body;
+
+      // 1. Validate api_key parameter
+      if (!api_key) {
+        return {
+          success: false,
+          code: 400,
+          status: 'FAIL',
+          message: 'api_key is required',
+        };
+      }
+
+      // 2. Get ApiKey with relations (type_service.partner)
+      const apiKeyData = await this.apikeyService.getApiKeyDetails(api_key);
+
+      // 3. Check if api key exists and is valid (expired, status, type)
+      this.ensureApiKeyUsable(apiKeyData);
+
+      // 4. Check Redis cooldown - CRITICAL BLOCKING LOGIC
+      const cooldownKey = ROTATE_IP_COOLDOWN(api_key);
+      const ttl = await getRedisTTL(cooldownKey);
+
+      if (ttl > 0) {
+        // REJECT: Still in cooldown period
+        return {
+          success: false,
+          code: 400,
+          status: 'FAIL',
+          message: `Còn ${ttl} giây nữa mới có thể xoay IP. Vui lòng thử lại sau.`,
+          seconds: ttl,
+        };
+      }
+
+      // 5. Check partner code
+      if (!apiKeyData.service_type || !apiKeyData.service_type.partner) {
+        return {
+          success: false,
+          code: 500,
+          status: 'FAIL',
+          message: 'Partner not configured',
+        };
+      }
+
+      const partnerCode = apiKeyData.service_type.partner.partner_code;
+
+      // 6. Route to partner-specific rotation method
+      let rotateResult: any;
+
+      switch (partnerCode) {
+        case 'homeproxy.vn':
+          rotateResult = await this.homeproxyService.rotateProxy(apiKeyData);
+          break;
+
+        case 'proxy.vn':
+          rotateResult = await this.proxyvnService.rotateProxy(apiKeyData);
+          break;
+
+        case 'mktproxy.com':
+          rotateResult = await this.mktproxyService.rotateProxy(apiKeyData);
+          break;
+
+        default:
+          return {
+            success: false,
+            code: 400,
+            status: 'FAIL',
+            message: `Partner does not support IP rotation: ${partnerCode}`,
+          };
+      }
+
+      // 7. Handle rotation result
+      if (rotateResult.success) {
+        // Set Redis cooldown on success (60 seconds)
+        const now = Math.floor(Date.now() / 1000);
+        await redisSet(cooldownKey, now, 60);
+
+        // Also update proxy cache for GET /api/proxies/new endpoint
+        const cacheKey = PROXY_XOAY(api_key);
+        const expiresAt = now + 60;
+        const cacheData = {
+          ...rotateResult.data,
+          setAt: now,
+          expiresAt,
+        };
+        await redisSet(cacheKey, cacheData, 60);
+
+        return {
+          success: true,
+          code: 200,
+          status: 'SUCCESS',
+          data: rotateResult.data,
+          message: rotateResult.data?.message || 'IP rotated successfully',
+        };
+      } else {
+        // Rotation failed (could be partner cooldown or error)
+        return {
+          success: false,
+          code: 400,
+          status: 'FAIL',
+          message: rotateResult.message || 'Rotation failed',
+          seconds: rotateResult.seconds,
+        };
+      }
+    } catch (error: unknown) {
+      // Re-throw HttpExceptions from ensureApiKeyUsable
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      // Log and return 500 for unexpected errors
+      if (error instanceof Error) {
+        console.error('rotateProxyIp Error:', error.message);
+        return {
+          success: false,
+          code: 500,
+          status: 'FAIL',
+          message: error.message || 'Internal Server Error',
+        };
+      }
+
+      console.error('Unknown error:', error);
+      return {
+        success: false,
+        code: 500,
+        status: 'FAIL',
+        message: 'Internal Server Error',
+      };
+    }
   }
 }

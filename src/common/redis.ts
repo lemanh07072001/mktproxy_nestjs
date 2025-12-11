@@ -52,3 +52,13 @@ export async function redisDel(key: string): Promise<void> {
   const client = getRedisClient();
   await client.del(key);
 }
+
+/**
+ * Get TTL (time to live) for a Redis key in seconds
+ * @param key - Redis key
+ * @returns TTL in seconds, -2 if key doesn't exist, -1 if key has no expiry
+ */
+export async function getRedisTTL(key: string): Promise<number> {
+  const client = getRedisClient();
+  return await client.ttl(key);
+}
