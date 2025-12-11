@@ -268,10 +268,11 @@ export class ProxyController {
                 pass: password,
                 setAt: now,
                 expiresAt,
-                timeRemaining: actualTimeRemaining,
+                timeRemaining: 60,
               };
 
-              await redisSet(PROXY_XOAY(key), dataJson, actualTimeRemaining);
+              // TTL cố định 1 phút (60 giây)
+              await redisSet(PROXY_XOAY(key), dataJson, 60);
 
               const {
                 setAt: _,
@@ -281,8 +282,8 @@ export class ProxyController {
               return {
                 data: {
                   ...dataWithoutTimestamps,
-                  timeRemaining: actualTimeRemaining,
-                  message: `Proxy mới, có thể xoay sau ${actualTimeRemaining}s`,
+                  timeRemaining: 60,
+                  message: `Proxy mới, có thể xoay sau 60s`,
                 },
                 success: true,
                 code: 200,
@@ -549,10 +550,11 @@ export class ProxyController {
                 pass: password,
                 setAt: now,
                 expiresAt,
-                timeRemaining: actualTimeRemaining,
+                timeRemaining: 60,
               };
 
-              await redisSet(PROXY_XOAY(key), dataJson, actualTimeRemaining);
+              // TTL cố định 1 phút (60 giây)
+              await redisSet(PROXY_XOAY(key), dataJson, 60);
 
               const {
                 setAt: _,
@@ -562,8 +564,8 @@ export class ProxyController {
               return {
                 data: {
                   ...dataWithoutTimestamps,
-                  timeRemaining: actualTimeRemaining,
-                  message: `Proxy hiện tại, có thể xoay sau ${actualTimeRemaining}s`,
+                  timeRemaining: 60,
+                  message: `Proxy hiện tại, có thể xoay sau 60s`,
                 },
                 success: true,
                 code: 200,
