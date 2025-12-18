@@ -84,10 +84,11 @@ export class ProxyService {
     return apiKey;
   }
 
-  async getProxyForKey(key: string) {
+  async getProxyForKey(key: string, rotateSeconds?: number) {
     // Validate key
     await this.validateKey(key);
 
+    const rotateInterval = rotateSeconds || this.ROTATE_SECONDS;
     const now = Math.floor(Date.now() / 1000);
     const [lastRotate, currentProxy] = await this.redis.mget(
       lastRotateKey(key),
@@ -96,11 +97,11 @@ export class ProxyService {
     // Nếu chưa đến thời gian xoay và có proxy hiện tại -> trả về proxy cũ
     if (
       lastRotate &&
-      now - Number(lastRotate) < this.ROTATE_SECONDS &&
+      now - Number(lastRotate) < rotateInterval &&
       currentProxy
     ) {
       const timeElapsed = now - Number(lastRotate);
-      const timeRemaining = this.ROTATE_SECONDS - timeElapsed;
+      const timeRemaining = rotateInterval - timeElapsed;
 
       return {
         proxy: JSON.parse(currentProxy),
@@ -114,10 +115,13 @@ export class ProxyService {
     return this.rotateProxy(
       key,
       currentProxy ? JSON.parse(currentProxy) : null,
+      rotateInterval,
     );
   }
 
-  private async rotateProxy(key: string, oldProxy?: any) {
+  private async rotateProxy(key: string, oldProxy?: any, rotateInterval?: number) {
+    const rotateSeconds = rotateInterval || this.ROTATE_SECONDS;
+
     // lấy danh sách proxy đang dùng và recent
     const [inuse, recent] = await Promise.all([
       this.redis.smembers(inUseKey),
@@ -154,7 +158,7 @@ export class ProxyService {
 
     this.logger.log(`🔄 Xoay proxy cho key ${key} -> ${proxyStr}`);
 
-    return { proxy, reused: false, timeRemaining: this.ROTATE_SECONDS };
+    return { proxy, reused: false, timeRemaining: rotateSeconds };
   }
 
   async getAllProxies() {

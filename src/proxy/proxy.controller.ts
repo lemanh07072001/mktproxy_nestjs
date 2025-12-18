@@ -14,6 +14,7 @@ import {
 
 import { ApikeyService } from 'src/apikey/apikey.service';
 import instance from 'src/common/axios-instance';
+import axios from 'axios';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { Public } from 'src/guards/public.decorator';
 import { GetProxyUrl } from './api/url.api';
@@ -35,7 +36,7 @@ export class ProxyController {
     private readonly homeproxyService: HomeproxyService,
     private readonly proxyvnService: ProxyvnService,
     private readonly mktproxyService: MktproxyService,
-  ) {}
+  ) { }
 
   private throwBadRequest(code: number, message: string, error: string): never {
     throw new HttpException(
@@ -236,8 +237,9 @@ export class ProxyController {
             api_key?.parent_api_mapping?.id_proxy_partner;
           const urlGetOrderProxyPartner = `${GetProxyUrl['homeproxy.vn']}/merchant/proxies?filter=id%3A%24eq%3Astring%3A${id_proxy_partner}`;
 
+          
           try {
-            const response = await instance.get<any>(urlGetOrderProxyPartner, {
+            const response = await axios.get<any>(urlGetOrderProxyPartner, {
               headers: {
                 Authorization: `Bearer ${token}`,
                 Accept: 'application/json',
@@ -245,6 +247,7 @@ export class ProxyController {
             });
             const dataResponse = response.data;
 
+          console.log(dataResponse);
             // Kiểm tra có data và data[0] không
             if (dataResponse?.data && dataResponse.data.length > 0) {
               const proxyData = dataResponse.data[0];
@@ -399,6 +402,112 @@ export class ProxyController {
             status: 'SUCCESS',
           };
         }
+
+        case 'zingproxy.com': {
+          // Kiểm tra cache trước
+          const cachedProxy = await redisGet(PROXY_XOAY(key));
+          if (cachedProxy) {
+            // Tính timeRemaining từ expiresAt
+            const now = Math.floor(Date.now() / 1000);
+            const timeRemaining = cachedProxy.expiresAt
+              ? Math.max(0, cachedProxy.expiresAt - now)
+              : 0;
+
+            const { setAt, expiresAt, ...dataWithoutTimestamps } = cachedProxy;
+            return {
+              data: {
+                ...dataWithoutTimestamps,
+                timeRemaining,
+                message: `Proxy hiện tại, có thể xoay sau ${timeRemaining}s`,
+              },
+              success: true,
+              code: 200,
+              status: 'SUCCESS',
+            };
+          }
+
+          const token = api_key.service_type.partner?.token_api;
+          const uid_partner = api_key?.parent_api_mapping?.uid;
+          const urlGetOrderProxyPartner = `${GetProxyUrl['zingproxy.com']}/proxy/dan-cu-viet-nam/get-ip?uId=${uid_partner}&location=Random`;
+
+          try {
+            const response = await axios.get(urlGetOrderProxyPartner, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: 'application/json',
+              },
+            });
+     
+            const dataResponse = response.data;
+
+            // Kiểm tra response thành công từ zingproxy.com
+            if (dataResponse?.status === 'success' && dataResponse?.proxy) {
+              const proxyInfo = dataResponse.proxy;
+
+              const now = Math.floor(Date.now() / 1000);
+              // timeChangeAllowInSeconds từ API (VD: 240 = 4 phút)
+              const actualTimeRemaining = Number(proxyInfo?.timeChangeAllowInSeconds) || 240;
+              const expiresAt = now + actualTimeRemaining;
+
+              // Tạo proxy string: ip:port:user:pass
+              const ip = proxyInfo?.hostIp || proxyInfo?.ip || '';
+              const port = proxyInfo?.portHttp || '';
+              const username = proxyInfo?.username || '';
+              const password = proxyInfo?.password || '';
+              const proxyString = `${ip}:${port}:${username}:${password}`;
+
+              const dataJson = {
+                realIpAddress: proxyInfo?.ip || ip,
+                [this.protocolKey(api_key?.protocol)]: proxyString,
+                [`${this.protocolKey(api_key?.protocol)}Port`]: port,
+                host: ip,
+                user: username,
+                pass: password,
+                setAt: now,
+                expiresAt,
+                timeRemaining: actualTimeRemaining,
+              };
+
+            
+              // Cache với TTL = timeChangeAllowInSeconds (240s)
+              await redisSet(PROXY_XOAY(key), dataJson, actualTimeRemaining);
+
+              const {
+                setAt: _,
+                expiresAt: __,
+                ...dataWithoutTimestamps
+              } = dataJson;
+
+              return {
+                data: {
+                  ...dataWithoutTimestamps,
+                  timeRemaining: actualTimeRemaining,
+                  message: `Proxy mới, có thể xoay sau ${actualTimeRemaining}s`,
+                },
+                success: true,
+                code: 200,
+                status: 'SUCCESS',
+              };
+            }
+
+            return {
+              success: false,
+              code: 50000001,
+              status: 'FAIL',
+              message: dataResponse?.message || 'Không tìm thấy proxy từ zingproxy.com',
+              error: 'ERROR_PROXY',
+            };
+          } catch (axiosError: any) {
+            const errData = axiosError?.response?.data;
+            return {
+              success: false,
+              code: 50000001,
+              status: 'FAIL',
+              message: errData?.message || 'Lỗi từ zingproxy.com',
+              error: 'ERROR_PROXY',
+            };
+          }
+        }
       }
     } catch (error: unknown) {
       if (error instanceof Error) {
@@ -519,7 +628,7 @@ export class ProxyController {
           const urlGetOrderProxyPartner = `${GetProxyUrl['homeproxy.vn']}/merchant/proxies?filter=id%3A%24eq%3Astring%3A${id_proxy_partner}`;
 
           try {
-            const response = await instance.get<any>(urlGetOrderProxyPartner, {
+            const response = await axios.get<any>(urlGetOrderProxyPartner, {
               headers: {
                 Authorization: `Bearer ${token}`,
                 Accept: 'application/json',
@@ -603,7 +712,8 @@ export class ProxyController {
           }
         }
 
-        case 'mktproxy.com': {
+        case 'mktproxy.com':
+        case 'mktproxy.vn': {
           // Kiểm tra cache trong Redis trước
           const cachedData = await redisGet(PROXY_XOAY(key));
 
@@ -681,6 +791,107 @@ export class ProxyController {
             status: 'SUCCESS',
           };
         }
+
+        case 'zingproxy.com': {
+          // Kiểm tra cache trong Redis trước
+          const cachedData = await redisGet(PROXY_XOAY(key));
+
+          if (cachedData) {
+            const now = Math.floor(Date.now() / 1000);
+            const timeRemaining = Math.max(0, cachedData.expiresAt - now);
+
+            const { setAt, expiresAt, ...dataWithoutTimestamps } = cachedData;
+
+            return {
+              data: {
+                ...dataWithoutTimestamps,
+                timeRemaining,
+                message: `Proxy hiện tại, có thể xoay sau ${timeRemaining}s`,
+              },
+              success: true,
+              code: 200,
+              status: 'SUCCESS',
+            };
+          }
+
+          // Không có cache, gọi API zingproxy.com
+          const token = api_key.service_type.partner?.token_api;
+          const uid_partner = api_key?.parent_api_mapping?.uid;
+          const urlGetOrderProxyPartner = `${GetProxyUrl['zingproxy.com']}/proxy/dan-cu-viet-nam/get-ip?uId=${uid_partner}&location=Random`;
+
+          try {
+            const response = await axios.get(urlGetOrderProxyPartner, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: 'application/json',
+              },
+            });
+
+            const dataResponse = response.data;
+
+            if (dataResponse?.status === 'success' && dataResponse?.proxy) {
+              const proxyInfo = dataResponse.proxy;
+
+              const now = Math.floor(Date.now() / 1000);
+              const actualTimeRemaining = Number(proxyInfo?.timeChangeAllowInSeconds) || 240;
+              const expiresAt = now + actualTimeRemaining;
+
+              const ip = proxyInfo?.hostIp || proxyInfo?.ip || '';
+              const port = proxyInfo?.portHttp || '';
+              const username = proxyInfo?.username || '';
+              const password = proxyInfo?.password || '';
+              const proxyString = `${ip}:${port}:${username}:${password}`;
+
+              const dataJson = {
+                realIpAddress: proxyInfo?.ip || ip,
+                [this.protocolKey(api_key?.protocol)]: proxyString,
+                [`${this.protocolKey(api_key?.protocol)}Port`]: port,
+                host: ip,
+                user: username,
+                pass: password,
+                setAt: now,
+                expiresAt,
+                timeRemaining: actualTimeRemaining,
+              };
+
+              await redisSet(PROXY_XOAY(key), dataJson, actualTimeRemaining);
+
+              const {
+                setAt: _,
+                expiresAt: __,
+                ...dataWithoutTimestamps
+              } = dataJson;
+
+              return {
+                data: {
+                  ...dataWithoutTimestamps,
+                  timeRemaining: actualTimeRemaining,
+                  message: `Proxy hiện tại, có thể xoay sau ${actualTimeRemaining}s`,
+                },
+                success: true,
+                code: 200,
+                status: 'SUCCESS',
+              };
+            }
+
+            return {
+              success: false,
+              code: 50000001,
+              status: 'FAIL',
+              message: dataResponse?.message || 'Không tìm thấy proxy từ zingproxy.com',
+              error: 'ERROR_PROXY',
+            };
+          } catch (axiosError: any) {
+            const errData = axiosError?.response?.data;
+            return {
+              success: false,
+              code: 50000001,
+              status: 'FAIL',
+              message: errData?.message || 'Lỗi từ zingproxy.com',
+              error: 'ERROR_PROXY',
+            };
+          }
+        }
       }
     } catch (error: unknown) {
       if (error instanceof Error) {
@@ -697,6 +908,7 @@ export class ProxyController {
   async getProxy(@Query('key') key: string) {
     try {
       const data = await this.proxyService.getProxyForKey(key);
+
 
       if (!data || !data.proxy) {
         return {
@@ -974,9 +1186,15 @@ export class ProxyController {
         };
       }
     } catch (error: unknown) {
-      // Re-throw HttpExceptions from ensureApiKeyUsable
+      // Handle HttpExceptions from ensureApiKeyUsable
       if (error instanceof HttpException) {
-        throw error;
+        const response: any = error.getResponse();
+        return {
+          success: false,
+          code: response.code || error.getStatus(),
+          status: 'FAIL',
+          message: response.message || 'Bad Request',
+        };
       }
 
       // Log and return 500 for unexpected errors

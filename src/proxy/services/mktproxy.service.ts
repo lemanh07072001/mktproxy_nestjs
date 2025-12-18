@@ -15,7 +15,7 @@ export class MktproxyService {
    */
   async rotateProxy(apiKey: Apikey): Promise<RotateResult> {
     try {
-      const dataResponse = await this.proxyService.getProxyForKey(apiKey.api_key);
+      const dataResponse: any = await this.proxyService.getProxyForKey(apiKey.api_key);
 
       if (!dataResponse?.success || !dataResponse?.proxy) {
         return {
