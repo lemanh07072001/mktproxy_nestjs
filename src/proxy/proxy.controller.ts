@@ -232,12 +232,12 @@ export class ProxyController {
             };
           }
 
+          // Cache hết hạn -> lấy proxy mới
           const token = api_key.service_type.partner?.token_api;
           const id_proxy_partner =
             api_key?.parent_api_mapping?.id_proxy_partner;
           const urlGetOrderProxyPartner = `${GetProxyUrl['homeproxy.vn']}/merchant/proxies?filter=id%3A%24eq%3Astring%3A${id_proxy_partner}`;
 
-          
           try {
             const response = await axios.get<any>(urlGetOrderProxyPartner, {
               headers: {
@@ -247,19 +247,12 @@ export class ProxyController {
             });
             const dataResponse = response.data;
 
-          console.log(dataResponse);
             // Kiểm tra có data và data[0] không
             if (dataResponse?.data && dataResponse.data.length > 0) {
               const proxyData = dataResponse.data[0];
               const proxyInfo = proxyData.proxy;
 
               const now = Math.floor(Date.now() / 1000);
-              // rotateInterval từ API là số phút (VD: 1 = 1 phút)
-              const rotateIntervalMinutes =
-                Number(proxyInfo?.rotateInterval) || 1;
-              // Chuyển từ phút sang giây để sử dụng trong Redis TTL và response
-              const actualTimeRemaining = rotateIntervalMinutes * 60;
-              const expiresAt = now + actualTimeRemaining;
 
               // Tạo proxy string: ip:port:user:pass
               const ip = proxyInfo?.ipaddress?.ip || '';
@@ -268,20 +261,58 @@ export class ProxyController {
               const password = proxyInfo?.password || '';
               const proxyString = `${ip}:${port}:${username}:${password}`;
 
+              // Gọi API rotate để lấy ip và timeRemaining (có retry khi 503)
+              const rotateUrl = `${GetProxyUrl['homeproxy.vn']}/merchant/proxies/${id_proxy_partner}/rotate`;
+              let timeRemaining = 60; // mặc định 60s
+              let realIp = ip; // mặc định từ proxy info
+              const maxRetries = 3;
+
+              for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                  const rotateRes = await axios.get(rotateUrl, {
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                      Accept: '*/*',
+                    },
+                  });
+                  console.log('✅ [homeproxy.vn] Rotate response:', rotateRes.data);
+
+                  // Lấy ip và timeRemaining từ response
+                  if (rotateRes.data?.ip) {
+                    realIp = rotateRes.data.ip;
+                  }
+                  if (rotateRes.data?.timeRemaining) {
+                    timeRemaining = rotateRes.data.timeRemaining;
+                  }
+                  break; // Thành công, thoát loop
+                } catch (err: any) {
+                  const errMessage = err?.response?.data?.message || err?.message || '';
+                  const is503 = errMessage.includes('503') || err?.response?.status === 503;
+
+                  if (is503 && attempt < maxRetries) {
+                    console.log(`⏳ [homeproxy.vn] Rotate 503, retry ${attempt}/${maxRetries}...`);
+                    await new Promise(r => setTimeout(r, 5000)); // Đợi 5s trước khi retry
+                    continue;
+                  }
+                  console.error('❌ [homeproxy.vn] Rotate error:', err?.response?.data || err?.message);
+                  break;
+                }
+              }
+
               const dataJson = {
-                realIpAddress: ip,
+                realIpAddress: realIp,
                 [this.protocolKey(api_key?.protocol)]: proxyString,
                 [`${this.protocolKey(api_key?.protocol)}Port`]: port,
                 host: ip,
                 user: username,
                 pass: password,
                 setAt: now,
-                expiresAt,
-                timeRemaining: 60,
+                expiresAt: now + timeRemaining,
+                timeRemaining,
               };
 
-              // TTL cố định 1 phút (60 giây)
-              await redisSet(PROXY_XOAY(key), dataJson, 60);
+              // TTL dựa vào timeRemaining từ lastRotate
+              await redisSet(PROXY_XOAY(key), dataJson, timeRemaining);
 
               const {
                 setAt: _,
@@ -291,8 +322,8 @@ export class ProxyController {
               return {
                 data: {
                   ...dataWithoutTimestamps,
-                  timeRemaining: 60,
-                  message: `Proxy mới, có thể xoay sau 60s`,
+                  timeRemaining,
+                  message: `Proxy mới, có thể xoay sau ${timeRemaining}s`,
                 },
                 success: true,
                 code: 200,
@@ -318,9 +349,7 @@ export class ProxyController {
               success: false,
               code: 50000001,
               status: 'FAIL',
-              // message:
-              //   axiosError?.response?.data?.message || axiosError.message,
-              message: errData?.message || 'Lỗi từ 0 homeproxy.vn',
+              message: errData?.message || 'Lỗi từ homeproxy.vn',
               error: 'ERROR_PROXY',
             };
           }
