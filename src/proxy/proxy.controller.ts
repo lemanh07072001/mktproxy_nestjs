@@ -83,11 +83,36 @@ export class ProxyController {
   }
 
   @Get('new')
+  @Public()
+  async getApiKeyDetails(@Query('key') key: string) {
+    if (!key) {
+      return {
+        success: false,
+        code: 400,
+        status: 'FAIL',
+        message: 'Key is required',
+        error: 'KEY_REQUIRED',
+      };
+    }
+    return this.handleGetProxy(key);
+  }
+
   @Post('new')
   @Public()
-  async getApiKeyDetails(@Query('key') queryKey?: string, @Body('key') bodyKey?: string) {
-    const key = queryKey || bodyKey;
-    
+  async postApiKeyDetails(@Body('key') key: string) {
+    if (!key) {
+      return {
+        success: false,
+        code: 400,
+        status: 'FAIL',
+        message: 'Key is required',
+        error: 'KEY_REQUIRED',
+      };
+    }
+    return this.handleGetProxy(key);
+  }
+
+  private async handleGetProxy(key: string) {
     if (!key) {
       return {
         success: false,
@@ -575,10 +600,8 @@ export class ProxyController {
   }
 
   @Get('current')
-  @Post('current')
   @Public()
-  async getProxyCurrent(@Query('key') queryKey?: string, @Body('key') bodyKey?: string) {
-    const key = queryKey || bodyKey;
+  async getProxyCurrent(@Query('key') key: string) {
     if (!key) {
       return {
         success: false,
@@ -588,6 +611,25 @@ export class ProxyController {
         error: 'KEY_REQUIRED',
       };
     }
+    return this.handleGetCurrentProxy(key);
+  }
+
+  @Post('current')
+  @Public()
+  async postProxyCurrent(@Body('key') key: string) {
+    if (!key) {
+      return {
+        success: false,
+        code: 400,
+        status: 'FAIL',
+        message: 'Key is required',
+        error: 'KEY_REQUIRED',
+      };
+    }
+    return this.handleGetCurrentProxy(key);
+  }
+
+  private async handleGetCurrentProxy(key: string) {
     try {
       const api_key = await this.apikeyService.getApiKeyDetails(key);
       this.ensureApiKeyUsable(api_key);
