@@ -87,6 +87,7 @@ export class ProxyController {
   @Public()
   async getApiKeyDetails(@Query('key') queryKey?: string, @Body('key') bodyKey?: string) {
     const key = queryKey || bodyKey;
+    
     if (!key) {
       return {
         success: false,
