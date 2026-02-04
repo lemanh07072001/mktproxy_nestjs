@@ -293,7 +293,7 @@ export class ProxyController {
 
               // Tạo proxy string: ip:port:user:pass
               const ip = proxyInfo?.ipaddress?.ip || '';
-              const port = proxyInfo?.port || '';
+              const port = Number(proxyInfo?.port) || 0;
               const username = proxyInfo?.username || '';
               const password = proxyInfo?.password || '';
               const proxyString = `${ip}:${port}:${username}:${password}`;
@@ -409,59 +409,38 @@ export class ProxyController {
                 timeRemaining,
                 message: `Proxy hiện tại, có thể xoay sau ${timeRemaining}s`,
               },
-
               success: true,
               code: 200,
               status: 'SUCCESS',
             };
           }
 
-          const dataResponse = await this.getProxy(key);
-
-          // Kiểm tra nếu không có proxy
-          if (!dataResponse?.success || !dataResponse?.proxy) {
+          // Không có cache - lấy từ DB
+          const dataProxy = api_key?.proxys;
+          if (!dataProxy) {
             return {
               success: false,
               code: 50000001,
               status: 'FAIL',
-              message: dataResponse?.message || 'Không còn proxy khả dụng',
+              message: 'Không tìm thấy proxy',
               error: 'NO_PROXY_AVAILABLE',
             };
           }
 
-          const proxyArray = dataResponse.proxy.split(':');
-          // proxyArray = [ip, port, user, pass]
-
-          const now = Math.floor(Date.now() / 1000);
-          const setAt = now;
-          const actualTimeRemaining = dataResponse.timeRemaining || 60;
-          const expiresAt = now + actualTimeRemaining;
-
-          const dataJson = {
-            realIpAddress: proxyArray[0],
-            http: dataResponse.proxy,
-            httpPort: proxyArray[1],
-            host: proxyArray[0],
-            user: proxyArray[2] || dataResponse.user,
-            pass: proxyArray[3] || dataResponse.pass,
-            setAt,
-            expiresAt,
-            timeRemaining: actualTimeRemaining,
-          };
-
-          await redisSet(PROXY_XOAY(key), dataJson, actualTimeRemaining);
-
-          const {
-            setAt: _,
-            expiresAt: __,
-            ...dataWithoutTimestamps
-          } = dataJson;
+          const proxyData = typeof dataProxy === 'string' ? JSON.parse(dataProxy) : dataProxy;
+          const proxyString = proxyData.http || '';
+          const proxyArray = proxyString.split(':');
 
           return {
             data: {
-              ...dataWithoutTimestamps,
-              timeRemaining: actualTimeRemaining,
-              message: `Proxy mới, có thể xoay sau ${actualTimeRemaining}s`,
+              realIpAddress: proxyArray[0] || '',
+              http: proxyString,
+              httpPort: proxyArray[1] || '',
+              host: proxyArray[0] || '',
+              user: proxyArray[2] || '',
+              pass: proxyArray[3] || '',
+              timeRemaining: 60,
+              message: 'Proxy từ database',
             },
             success: true,
             code: 200,
@@ -573,6 +552,16 @@ export class ProxyController {
               error: 'ERROR_PROXY',
             };
           }
+        }
+
+        default: {
+          return {
+            success: false,
+            code: 400,
+            status: 'FAIL',
+            message: `Partner does not support /new: ${api_key.service_type.partner?.partner_code}`,
+            error: 'PARTNER_NOT_SUPPORTED',
+          };
         }
       }
     } catch (error: unknown) {
@@ -739,7 +728,7 @@ export class ProxyController {
 
               // Tạo proxy string: ip:port:user:pass
               const ip = proxyInfo?.ipaddress?.ip || '';
-              const port = proxyInfo?.port || '';
+              const port = Number(proxyInfo?.port) || 0;
               const username = proxyInfo?.username || '';
               const password = proxyInfo?.password || '';
               const proxyString = `${ip}:${port}:${username}:${password}`;
@@ -863,54 +852,32 @@ export class ProxyController {
             };
           }
 
-          // Nếu không có cache, lấy proxy mới
-          const dataResponse = await this.getProxy(key);
-
-          // Kiểm tra nếu không có proxy
-          if (!dataResponse?.success || !dataResponse?.proxy) {
+          // Không có cache - lấy từ DB
+          const dataProxy = api_key?.proxys;
+          if (!dataProxy) {
             return {
               success: false,
               code: 50000001,
               status: 'FAIL',
-              message: dataResponse?.message || 'Không còn proxy khả dụng',
+              message: 'Không tìm thấy proxy',
               error: 'NO_PROXY_AVAILABLE',
             };
           }
 
-          const proxyArray = dataResponse.proxy.split(':');
-          // proxyArray = [ip, port, user, pass]
-
-          const now = Math.floor(Date.now() / 1000);
-          const setAt = now;
-          const actualTimeRemaining = dataResponse.timeRemaining || 60;
-          const expiresAt = now + actualTimeRemaining;
-
-          const dataJson = {
-            realIpAddress: proxyArray[0],
-            http: dataResponse.proxy, // Full proxy string: ip:port:user:pass
-            httpPort: proxyArray[1],
-            host: proxyArray[0],
-            user: proxyArray[2] || dataResponse.user,
-            pass: proxyArray[3] || dataResponse.pass,
-            setAt,
-            expiresAt,
-            timeRemaining: actualTimeRemaining,
-          };
-
-          await redisSet(PROXY_XOAY(key), dataJson, actualTimeRemaining);
-
-          // Bỏ setAt và expiresAt khỏi response
-          const {
-            setAt: _,
-            expiresAt: __,
-            ...dataWithoutTimestamps
-          } = dataJson;
+          const proxyData = typeof dataProxy === 'string' ? JSON.parse(dataProxy) : dataProxy;
+          const proxyString = proxyData.http || '';
+          const proxyArray = proxyString.split(':');
 
           return {
             data: {
-              ...dataWithoutTimestamps,
-              timeRemaining: actualTimeRemaining,
-              message: `Proxy mới, có thể xoay sau ${actualTimeRemaining}s`,
+              realIpAddress: proxyArray[0] || '',
+              http: proxyString,
+              httpPort: proxyArray[1] || '',
+              host: proxyArray[0] || '',
+              user: proxyArray[2] || '',
+              pass: proxyArray[3] || '',
+              timeRemaining: 60,
+              message: 'Proxy từ database',
             },
             success: true,
             code: 200,
@@ -1081,6 +1048,70 @@ export class ProxyController {
         success: false,
         message: error.message,
         error: error.name,
+      };
+    }
+  }
+
+  // API lấy proxy từ ProxyService (cho mktproxy.com)
+  @Get('fetch')
+  @Post('fetch')
+  @Public()
+  async fetchProxy(@Query('key') queryKey?: string, @Body('key') bodyKey?: string) {
+    const key = queryKey || bodyKey;
+    if (!key) {
+      return {
+        success: false,
+        code: 50000001,
+        status: 'FAIL',
+        message: 'Key is required',
+        error: 'KEY_REQUIRED',
+      };
+    }
+
+    try {
+      const dataResponse = await this.proxyService.getProxyForKey(key);
+
+      // Kiểm tra nếu không có proxy
+      if (!dataResponse || !dataResponse.proxy) {
+        return {
+          success: false,
+          code: 50000001,
+          status: 'FAIL',
+          message: 'Không còn proxy khả dụng',
+          error: 'NO_PROXY_AVAILABLE',
+        };
+      }
+
+      const proxyStr =
+        dataResponse.proxy.user && dataResponse.proxy.pass
+          ? `${dataResponse.proxy.ip}:${dataResponse.proxy.port}:${dataResponse.proxy.user}:${dataResponse.proxy.pass}`
+          : `${dataResponse.proxy.ip}:${dataResponse.proxy.port}`;
+
+      const proxyArray = proxyStr.split(':');
+      const actualTimeRemaining = dataResponse.timeRemaining || 60;
+
+      return {
+        data: {
+          realIpAddress: proxyArray[0],
+          http: proxyStr,
+          httpPort: proxyArray[1],
+          host: proxyArray[0],
+          user: proxyArray[2] || '',
+          pass: proxyArray[3] || '',
+          timeRemaining: actualTimeRemaining,
+          message: `Proxy mới, có thể xoay sau ${actualTimeRemaining}s`,
+        },
+        success: true,
+        code: 200,
+        status: 'SUCCESS',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        code: 50000001,
+        status: 'FAIL',
+        message: error.message || 'Internal Server Error',
+        error: error.name || 'EXCEPTION',
       };
     }
   }
